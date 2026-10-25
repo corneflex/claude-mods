@@ -1,0 +1,14 @@
+{
+  "name": "claude-mods",
+  "owner": {
+    "name": "corneflex"
+  },
+  "description": "Mods for Claude Code by corneflex: panes, hooks and other interface changes.",
+  "plugins": [
+    {
+      "name": "agents-panel",
+      "source": "./mods/agents-panel",
+      "description": "A live Agents pane beside the chat: each subagent's model, effort, tokens, cost, time and progress, grouped by run."
+    }
+  ]
+}
