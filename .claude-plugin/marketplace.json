@@ -9,6 +9,11 @@
       "name": "agents-panel",
       "source": "./mods/agents-panel",
       "description": "A live Agents pane beside the chat: each subagent's model, effort, tokens, cost, time and progress, grouped by run."
+    },
+    {
+      "name": "live-filetree",
+      "source": "./mods/live-filetree",
+      "description": "A Files pane that shows what Claude is reading, editing and creating right now, with git status, live highlights and click-to-diff."
     }
   ]
 }

@@ -6,6 +6,7 @@ interface or behaviour. This repository is a plugin marketplace, so each mod ins
 | Mod | What it does |
 |---|---|
 | [agents-panel](mods/agents-panel) | A live **Agents** pane beside the chat that tracks every subagent: model, effort, tokens, cost, time and progress, grouped by run. |
+| [live-filetree](mods/live-filetree) | A live **Files** pane: what Claude is reading, editing and creating right now, highlighted and animated in the file tree, with git status and click-to-diff. |
 
 ## Install
 
@@ -13,6 +14,7 @@ At the prompt of a Claude Code terminal session:
 
 ```
 /plugin install agents-panel --marketplace corneflex/claude-mods
+/plugin install live-filetree --marketplace corneflex/claude-mods
 ```
 
 Answer `y` to add the marketplace, then pick a scope (user scope loads it in every session).
@@ -21,6 +23,10 @@ From a shell:
 
 ```bash
 claude plugin install agents-panel --marketplace corneflex/claude-mods
+```
+
+```bash
+claude plugin install live-filetree --marketplace corneflex/claude-mods
 ```
 
 In the desktop app, where `/plugin` does not run: click **+** next to the prompt box, then **Plugins**,
@@ -77,6 +83,57 @@ In testing, tokens, tool counts and durations matched Claude Code's own completi
 ### Surfaces
 
 The pane draws on the desktop app (with the avatars and bars as SVG) and in the terminal (text bars).
+
+---
+
+## live-filetree
+
+![Files pane mockup](docs/screenshots/live-filetree.png)
+
+*Mockup drawn from the data recorded during a real live check (two reads, then a new file created and
+edited). In the app the highlighted name animates. A screenshot of the pane will replace it.*
+
+A **Files** pane that opens beside the chat in the desktop app (`/live-files` opens it anywhere).
+
+**Status card.** What Claude is doing right now, then what it did when the turn ends:
+
+| While working | When done |
+|---|---|
+| `Claude is thinking` (spinning ✳) | `Claude committed 2 files` + short commit hash |
+| `Claude is reading 3 files` (purple) | `Claude edited 1 file` + path and `+1 -1` |
+| `Claude is editing client.js` (orange) | `Claude created 1 file` |
+| `Claude is creating notes.md` (green) | `Claude read 3 files` |
+
+Below it are the branch and how far it's ahead (`main ↑1`), then `clean, nothing changed` or
+`+A -D · N changed`. A legend shows the colours for Claude read, Claude edited and Not committed.
+
+**Tools.**
+- *Find a file* searches every tracked and untracked file.
+- *Refresh*, *Collapse all* and *Show sizes / dates*.
+- *Up a folder*, *Back to project* and *Hide / Show hidden files*.
+
+**Claude touched.** Every file Claude read, edited, created or committed during the current prompt. Each one
+has a type badge (JS, TS, MD, PDF, CSV…), its folder, `+/-` line counts and a pill: Opened, Edited,
+Created or Committed.
+
+**All files.** The project tree, with each file's date or size.
+- Folders open by themselves down to the file Claude is working on.
+- Files and folders with uncommitted changes are yellow, with their git status code and `+/-` counts.
+
+**Live highlight.** While Claude works on a file, its row in both lists lights up: purple for reading,
+orange for editing, green for creating.
+- A bright band sweeps across the file name and a glowing scan line runs beneath it.
+- Edited files get a blinking caret, and new files type themselves in.
+- A pulsing `reading` / `editing` / `creating` pill sits beside the name.
+
+**Click to diff.** Click any file to open its `git diff` underneath, with added lines in green and removed lines
+in red. A new file shows as all-added lines, and a file with no changes shows its contents. Click it again
+or press *Close* to hide it.
+
+Git status refreshes every 5 seconds and after every edit, write or shell command. The mod also registers
+a read-only tool, `mcp__live-filetree__state`, which returns what the pane holds as JSON. The animations
+use SVG on the desktop app; the terminal shows the same information with coloured text. It has no
+third-party dependencies.
 
 ---
 
