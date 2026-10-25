@@ -63,10 +63,9 @@ test('reads and edits show in the status card, touched list and tree', async ($,
     // The touched list is drawn by the animated Client; its rows carry the file names.
     expect(await ui.find({ type: 'Text', text: /client\.js/, in: 'touched' })).toBeDefined()
     // File types show as icons and Claude's actions as text badges, with no background colours.
-    // Material glyph (Nerd Font, Atom Material colour) in the terminal; emoji in the desktop app.
-    const icon = await ui.find({ type: 'Text', text: surface === 'terminal' ? '\u{f031e} ' : '🟨 ', in: 'touched' })
-    expect(icon).toBeDefined()
-    if (surface === 'terminal') expect((icon?.props as { color?: string }).color).toBe('#FFCA28')
+    // File types show as coloured text labels, with no background.
+    const label = await ui.find({ type: 'Text', text: 'JS  ', in: 'touched' })
+    expect((label?.props as { color?: string }).color).toBe('#E8C46A')
     expect(await ui.find({ type: 'Text', text: '✎ Edited', in: 'touched' })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: '◉ Opened', in: 'touched' })).toBeDefined()
     expect(JSON.stringify(await ui.drawn({ in: 'touched' }))).not.toContain('backgroundColor":"#')

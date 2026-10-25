@@ -169,18 +169,10 @@ Below it are the branch and how far it's ahead (`main ↑1`), then `clean, nothi
 - *Up a folder*, *Back to project* and *Hide / Show hidden files*.
 
 **Claude touched.** Every file Claude read, edited, created or committed during the current prompt. Each one
-shows a file-type icon, its folder, `+/-` line counts, and a coloured text badge with no background: `◉ Opened`, `✎ Edited`,
+shows a coloured file-type label (`JS`, `TS`, `MD`, `PY`…), its folder, `+/-` line counts, and a coloured text badge with no background: `◉ Opened`, `✎ Edited`,
 `✚ Created` or `✓ Committed`.
 
-**All files.** The project tree, with folder and file-type icons, and each file's date or size.
-
-**Icons.** In the terminal, files show Nerd Font Material Design glyphs (`nf-md-*`) coloured in the Atom
-Material Icons palette: yellow for JavaScript, blue for TypeScript, cyan for React, and so on. This needs a
-[Nerd Font](https://www.nerdfonts.com) as the terminal font. The desktop app's font has no Nerd glyphs,
-so there it shows emoji instead (🟨 JS, 🔷 TS, 📝 Markdown, 🐍 Python…). The `icons` option (`/config`, or
-`pluginConfigs` in `~/.claude/settings.json`) sets `auto` (default), `nerd` (always glyphs) or `emoji`.
-- Folders open by themselves down to the file Claude is working on.
-- Files and folders with uncommitted changes are yellow, with their git status code and `+/-` counts.
+**All files.** The project tree, with file-type labels and each file's date or size.
 
 **Live highlight.** While Claude works on a file, its name in both lists lights up: purple for reading,
 orange for editing, green for creating.
@@ -190,7 +182,7 @@ orange for editing, green for creating.
 The rows animate inside the pane's own drawing, so the tree no longer flickers while it updates.
 
 **Diff screen.** Click any file to open a full-screen diff in the style of VS Code:
-- **Header:** a *← Files* button (or `b`) that returns to the tree, the file's icon, name, folder and
+- **Header:** a *← Files* button (or `b`) that returns to the tree, the file's type label, name, folder and
   `+/-` counts.
 - **Body:** line numbers in the gutter, removed lines on red and added lines on green, and blue hunk headers.
 - **Layout:** *Side by side* (or `v`) puts HEAD on the left and the working tree on the right; *Inline*
