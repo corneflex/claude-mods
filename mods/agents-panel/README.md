@@ -4,9 +4,11 @@ An **Agents** pane beside the Claude Code chat that tracks every subagent the Ag
 effort, tokens, estimated cost, time and progress, grouped by run. Each agent is drawn as an animated pixel
 character.
 
-![The seven characters, with the commit and push stamps](../../docs/screenshots/agents-panel-characters.png)
+![agents-panel demo](../../docs/screenshots/agents-panel-demo.gif)
 
-*One frame of each character, rendered from the mod's own SVGs.*
+*An 11-second demo: four agents run as one batch, one commits, one pushes, and they finish one by one.
+Rebuilt from the mod's own sprite code and rendered frame by frame; the numbers come from a scripted
+scenario, not a real run.*
 
 - [Installation](#installation)
 - [Usage](#usage)
@@ -48,6 +50,10 @@ Each batch of agents launched from one prompt is a **run**, titled with that pro
   - a progress bar, and ✓ when it finishes (✗ if it failed or was interrupted).
 
 ## Characters
+
+![The seven characters, with the commit and push stamps](../../docs/screenshots/agents-panel-characters.png)
+
+*One frame of each character, rendered from the mod's own SVGs.*
 
 Within a run, each agent gets the next character in this list. Each character has its own look and motion,
 and performs two tricks in a 6-second loop:

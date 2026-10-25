@@ -4,7 +4,10 @@ Mods for [Claude Code](https://claude.com/claude-code): plugins that change Clau
 as panes beside the chat that show what Claude and its subagents are doing. This repository is a plugin
 marketplace, so each mod installs with one command.
 
-![live-filetree demo](docs/screenshots/live-filetree-demo.gif)
+<p>
+  <img src="docs/screenshots/agents-panel-demo.gif" alt="agents-panel demo" width="49%">
+  <img src="docs/screenshots/live-filetree-demo.gif" alt="live-filetree demo" width="49%">
+</p>
 
 ## Mods
 
