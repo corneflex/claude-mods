@@ -62,6 +62,11 @@ test('reads and edits show in the status card, touched list and tree', async ($,
     expect(await ui.find({ type: 'Text', text: /ALL FILES/ })).toBeDefined()
     // The touched list is drawn by the animated Client; its rows carry the file names.
     expect(await ui.find({ type: 'Text', text: /client\.js/, in: 'touched' })).toBeDefined()
+    // File types show as icons and Claude's actions as text badges, with no background colours.
+    expect(await ui.find({ type: 'Text', text: '🟨 ', in: 'touched' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: '✎ Edited', in: 'touched' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: '◉ Opened', in: 'touched' })).toBeDefined()
+    expect(JSON.stringify(await ui.drawn({ in: 'touched' }))).not.toContain('backgroundColor":"#')
 
     // A press inside the Client opens the full-screen diff, inline in a narrow pane.
     await ui.post({ press: `f:${ROOT}/src/client.js` }, { in: 'touched' })

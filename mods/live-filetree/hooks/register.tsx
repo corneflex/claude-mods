@@ -3,6 +3,7 @@ import type { EngineInterface, Register, RenderChildren } from 'claude-code'
 
 import type { Activity, Entry, FileAction, GitFile, GitInfo, Preview, Touched, View } from '../types'
 import type { RowSpec, RowsProps, Seg } from './rows'
+import { FOLDER, FOLDER_OPEN, iconFor } from './icons'
 
 const PANE = 'live-filetree'
 
@@ -31,11 +32,8 @@ const preview = atom({ plugin: 'live-filetree', key: 'preview' } as const, null 
 
 const C = {
   read: '#A87BF0',
-  readBg: '#2A2140',
   edit: '#F0883E',
-  editBg: '#36261A',
   create: '#4CC38A',
-  createBg: '#1B3328',
   commit: '#4CC38A',
   uncommitted: '#E5C07B',
   add: '#57C27A',
@@ -47,37 +45,13 @@ const C = {
   border: '#343434',
 }
 
-const BADGES: Record<string, [string, string, string]> = {
-  js: ['JS', '#E8C46A', '#3A3320'],
-  jsx: ['JSX', '#E8C46A', '#3A3320'],
-  mjs: ['JS', '#E8C46A', '#3A3320'],
-  ts: ['TS', '#6CB6FF', '#1F2C3A'],
-  tsx: ['TSX', '#6CB6FF', '#1F2C3A'],
-  json: ['{}', '#E8C46A', '#3A3320'],
-  md: ['MD', '#6CB6FF', '#1F2C3A'],
-  pdf: ['PDF', '#F07178', '#3A1F22'],
-  csv: ['CSV', '#A8D86E', '#22331F'],
-  doc: ['DOC', '#6CB6FF', '#1F2C3A'],
-  docx: ['DOC', '#6CB6FF', '#1F2C3A'],
-  py: ['PY', '#6CB6FF', '#1F2C3A'],
-  rs: ['RS', '#F0883E', '#36261A'],
-  kt: ['KT', '#A87BF0', '#2A2140'],
-  java: ['JV', '#F0883E', '#36261A'],
-  html: ['<>', '#F0883E', '#36261A'],
-  css: ['CSS', '#6CB6FF', '#1F2C3A'],
-  sh: ['SH', '#A8D86E', '#22331F'],
-  yml: ['YML', '#F07178', '#3A1F22'],
-  yaml: ['YML', '#F07178', '#3A1F22'],
-  png: ['IMG', '#A87BF0', '#2A2140'],
-  jpg: ['IMG', '#A87BF0', '#2A2140'],
-  svg: ['SVG', '#E8C46A', '#3A3320'],
-}
 
-const PILLS: Record<FileAction, [string, string, string]> = {
-  read: ['Opened', C.read, C.readBg],
-  edit: ['Edited', C.edit, C.editBg],
-  create: ['Created', C.create, C.createBg],
-  commit: ['Committed', C.commit, C.createBg],
+// What Claude did to a file, as a coloured text badge (no background).
+const BADGE: Record<FileAction, [string, string]> = {
+  read: ['◉ Opened', C.read],
+  edit: ['✎ Edited', C.edit],
+  create: ['✚ Created', C.create],
+  commit: ['✓ Committed', C.commit],
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -125,10 +99,6 @@ function isUnder(dir: string, p: string) {
   return p === dir || p.startsWith(dir === '/' ? '/' : `${dir}/`)
 }
 
-function badgeOf(name: string): [string, string, string] {
-  const ext = name.includes('.') ? name.slice(name.lastIndexOf('.') + 1).toLowerCase() : ''
-  return BADGES[ext] ?? [(ext || 'TXT').slice(0, 3).toUpperCase(), '#B0B0B0', '#2A2A2A']
-}
 
 function dateText(ms: number) {
   const d = new Date(ms)
@@ -190,7 +160,6 @@ const PALETTES: Record<string, string[]> = {
   creating: ['#2E8A5C', '#4CC38A', '#9BE8C2', '#FFFFFF'],
 }
 const VERB_COLOUR: Record<string, string> = { reading: '#A87BF0', editing: '#F0883E', creating: '#4CC38A' }
-const VERB_BG: Record<string, string> = { reading: '#2A2140', editing: '#36261A', creating: '#1B3328' }
 
 // VS Code dark diff colours.
 const DIFF = {
@@ -725,28 +694,27 @@ export const register: Register = on => {
       const done = touchedByPath.get(path)
       const c = g.changed[path]
       const n = basename(path)
-      const [badgeTxt, badgeFg, badgeBg] = badgeOf(n)
-      const left: Seg[] = [{ t: '  '.repeat(opts.indent ?? 0) }, { t: ` ${badgeTxt} `, c: badgeFg, bg: badgeBg, b: true }, { t: ' ' }]
+      const left: Seg[] = [{ t: '  '.repeat(opts.indent ?? 0) }, { t: `${iconFor(n)} ` }]
       if (t?.verb) left.push({ t: n, sh: t.verb, b: true })
       else left.push({ t: n, b: true, c: c ? C.uncommitted : done?.action === 'read' ? C.read : undefined })
       if (opts.dir) left.push({ t: `  ${relative(cwd, dirname(path)) || '.'}`, dim: true })
       const right: Seg[] = []
       if (t?.verb) {
-        right.push({ t: ` ${t.verb} `, c: VERB_COLOUR[t.verb], spin: true, b: true })
+        right.push({ t: `${t.verb} `, c: VERB_COLOUR[t.verb], spin: true, b: true })
       } else {
         if (c && done?.action !== 'commit' && (c.adds || c.dels)) {
           if (!done) right.push({ t: `${c.code} `, c: C.uncommitted, b: true })
           right.push({ t: `+${c.adds}`, c: C.add }, { t: ` -${c.dels} `, c: C.del })
         }
         if (done) {
-          const [txt, fg, bg] = PILLS[done.action]
-          right.push({ t: ` ${txt} `, c: fg, bg, b: true })
+          const [txt, colour] = BADGE[done.action]
+          right.push({ t: txt, c: colour, b: true })
         } else if (!c && opts.indent !== undefined) {
           const entry = listing[dirname(path)]?.find(x => x.name === n)
           if (entry) right.push({ t: v.showSizes ? sizeText(entry.size) : dateText(entry.mtimeMs), dim: true })
         }
       }
-      return { id: `f:${path}`, left, right, bg: t?.verb ? VERB_BG[t.verb] : undefined }
+      return { id: `f:${path}`, left, right }
     }
 
     // Rows animate inside a Client, so a shimmer never redraws the pane. Surfaces without Client get them still.
@@ -755,14 +723,14 @@ export const register: Register = on => {
       const props: RowsProps = JSON.parse(JSON.stringify({ rows, hoverBg: '#2A2D2E', palettes: PALETTES, empty }))
       if (Client) return <Client key={key} module="./rows.tsx" props={props} />
       if (rows.length === 0) return <Text dimColor>{empty}</Text>
-      const seg = (x: Seg) => <Text color={x.sh ? VERB_COLOUR[x.sh] : x.c} backgroundColor={x.bg} bold={x.b} dimColor={x.dim}>{x.t}</Text>
+      const seg = (x: Seg) => <Text color={x.sh ? VERB_COLOUR[x.sh] : x.c} bold={x.b} dimColor={x.dim}>{x.t}</Text>
       return (
         <Box flexDirection="column">
           {rows.map((r, i) => {
             const path = r.id.slice(2)
             const open = r.id.startsWith('d:') ? () => void toggleDir($, path) : () => void loadPreview($, path, key)
             return (
-              <Box key={`${key}${i}`} flexDirection="row" backgroundColor={r.bg}>
+              <Box key={`${key}${i}`} flexDirection="row">
                 {r.id ? <Button key={`${key}:${r.id}`} plain onPress={open}>{r.left.map(seg)}</Button> : <Text>{r.left.map(seg)}</Text>}
                 <Box flexGrow={1} />
                 <Text>{r.right.map(seg)}</Text>
@@ -776,7 +744,6 @@ export const register: Register = on => {
     // --- Full-screen diff, VS Code style --------------------------------------------------
     if (shown) {
       const c = g.changed[shown.path]
-      const [badgeTxt, badgeFg, badgeBg] = badgeOf(shown.path)
       const width = e.props.bodyColumns
       const split = shown.split ?? width >= 110
       const lines = shown.mode === 'diff' ? parseDiff(shown.text) : []
@@ -814,7 +781,7 @@ export const register: Register = on => {
         <Box flexDirection="column">
           <Box flexDirection="row" alignItems="center" gap={1} backgroundColor={DIFF.barBg} paddingX={1}>
             <Button key="back" label="← Files" hotkey="b" onPress={() => void update($, preview, () => null)} />
-            <Text color={badgeFg} backgroundColor={badgeBg} bold>{` ${badgeTxt} `}</Text>
+            <Text>{iconFor(basename(shown.path))}</Text>
             <Text bold>{basename(shown.path)}</Text>
             <Text dimColor wrap="truncate-end">{relative(cwd, dirname(shown.path)) || '.'}</Text>
             <Box flexGrow={1} />
@@ -936,7 +903,7 @@ export const register: Register = on => {
             const colour = hasLive(path) ? C.read : hasChanges(path) ? C.uncommitted : C.folder
             rows.push({
               id: `d:${path}`,
-              left: [{ t: '  '.repeat(depth) }, { t: isOpen ? '▾ ' : '▸ ', dim: true }, { t: `${entry.name}/`, c: colour, b: true }],
+              left: [{ t: '  '.repeat(depth) }, { t: isOpen ? '▾ ' : '▸ ', dim: true }, { t: `${isOpen ? FOLDER_OPEN : FOLDER} ` }, { t: entry.name, c: colour, b: true }],
               right: [],
             })
             if (isOpen) walk(path, depth + 1)

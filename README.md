@@ -169,14 +169,15 @@ Below it are the branch and how far it's ahead (`main ↑1`), then `clean, nothi
 - *Up a folder*, *Back to project* and *Hide / Show hidden files*.
 
 **Claude touched.** Every file Claude read, edited, created or committed during the current prompt. Each one
-has a type badge (JS, TS, MD, PDF, CSV…), its folder, `+/-` line counts and a pill: Opened, Edited,
-Created or Committed.
+shows a file-type icon (🟨 JS, 🔷 TS, 📝 Markdown, 🐍 Python, 🦀 Rust, 🧾 JSON, 🐳 Dockerfile, 🧪 tests…), its
+folder, `+/-` line counts, and a coloured text badge with no background: `◉ Opened`, `✎ Edited`,
+`✚ Created` or `✓ Committed`.
 
-**All files.** The project tree, with each file's date or size.
+**All files.** The project tree, with 📁/📂 folders, file-type icons, and each file's date or size.
 - Folders open by themselves down to the file Claude is working on.
 - Files and folders with uncommitted changes are yellow, with their git status code and `+/-` counts.
 
-**Live highlight.** While Claude works on a file, its row in both lists lights up: purple for reading,
+**Live highlight.** While Claude works on a file, its name in both lists lights up: purple for reading,
 orange for editing, green for creating.
 - A bright band sweeps along the file name letter by letter.
 - A spinner turns beside the `reading` / `editing` / `creating` label.
@@ -184,7 +185,7 @@ orange for editing, green for creating.
 The rows animate inside the pane's own drawing, so the tree no longer flickers while it updates.
 
 **Diff screen.** Click any file to open a full-screen diff in the style of VS Code:
-- **Header:** a *← Files* button (or `b`) that returns to the tree, the file's badge, name, folder and
+- **Header:** a *← Files* button (or `b`) that returns to the tree, the file's icon, name, folder and
   `+/-` counts.
 - **Body:** line numbers in the gutter, removed lines on red and added lines on green, and blue hunk headers.
 - **Layout:** *Side by side* (or `v`) puts HEAD on the left and the working tree on the right; *Inline*

@@ -2,8 +2,8 @@ import type { ClientModule } from 'claude-code'
 
 // One run of text in a row. `sh` names a shimmer palette (the letters light up in a moving band),
 // `spin` appends a spinner frame; both animate here, in the surface, so the plugin never redraws for them.
-export type Seg = { t: string; c?: string; bg?: string; b?: boolean; dim?: boolean; sh?: string; spin?: boolean }
-export type RowSpec = { id: string; left: Seg[]; right: Seg[]; bg?: string }
+export type Seg = { t: string; c?: string; b?: boolean; dim?: boolean; sh?: string; spin?: boolean }
+export type RowSpec = { id: string; left: Seg[]; right: Seg[] }
 export type RowsProps = { rows: RowSpec[]; hoverBg: string; palettes: Record<string, string[]>; empty?: string }
 type Local = { phase: number; hover: number; ref: { stop?: () => void } }
 
@@ -52,14 +52,14 @@ const Rows: ClientModule<RowsProps, Local> = (props, surface) => {
       return <Text bold={s.b}>{chars.map((ch, i) => <Text color={band(i, phase, chars.length, palette)}>{ch}</Text>)}</Text>
     }
     const text = s.spin ? `${s.t}${FRAMES[phase % FRAMES.length]}` : s.t
-    return <Text color={s.c} backgroundColor={s.bg} bold={s.b} dimColor={s.dim}>{text}</Text>
+    return <Text color={s.c} bold={s.b} dimColor={s.dim}>{text}</Text>
   }
 
   if (props.rows.length === 0) return <Text dimColor>{props.empty ?? ''}</Text>
   return (
     <Box flexDirection="column">
       {props.rows.map((r, i) => (
-        <Box flexDirection="row" height={1} overflow="hidden" backgroundColor={i === state.hover ? props.hoverBg : r.bg}>
+        <Box flexDirection="row" height={1} overflow="hidden" backgroundColor={i === state.hover ? props.hoverBg : undefined}>
           <Box flexShrink={1} overflow="hidden">{r.left.map(draw)}</Box>
           <Box flexGrow={1} />
           {r.right.map(draw)}
