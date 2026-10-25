@@ -93,28 +93,30 @@ Each agent in a run is a different character, and each one moves while its agent
 | digger | miner's helmet with a lamp | lamp beam flickers, pickaxe swings, dirt flies |
 | cowboy | wide-brim hat | lasso spins overhead, rides at a bounce, waves |
 | police | cap and gold badge | red/blue siren flashes and glows, arm directs traffic |
-| nurse | white cap with a red cross | sways while hearts float up and fade |
-| biker | helmet and visor | leans on spinning wheels, speed lines stream past |
+| nurse | white cap with a red cross | sways side to side while hearts float up and fade |
+| biker | helmet and visor | bounces on spinning wheels, speed lines stream past |
 | worker | hard hat and hi-vis vest | jackhammer shakes the whole sprite, dust puffs |
-| astronaut | helmet bubble and antenna | floats and tilts, antenna blinks, stars twinkle |
+| astronaut | helmet bubble and antenna | floats and drifts, antenna blinks, stars twinkle |
 
 On top of its own move, every character performs two tricks in a 6-second loop:
 
 | Character | Tricks |
 |---|---|
 | digger | jump, then dance |
-| cowboy | backflip, then jump |
-| police | dance, then spin |
-| nurse | spin, then jump |
-| biker | wheelie, then jump |
-| worker | shake, then jump |
-| astronaut | spin, then backflip |
+| cowboy | double jump, then side shuffle |
+| police | dance, then squat |
+| nurse | side shuffle, then jump |
+| biker | jump, then stomp |
+| worker | stomp, then jump |
+| astronaut | double jump, then squat |
+
+The characters themselves never rotate or flip; only props such as the pickaxe and the bike's wheels turn.
 
 They also blink and breathe, out of step with each other, and a shadow at their feet shrinks while they're
 in the air. While an agent is waiting on the model, with no tool running, a thought bubble with bouncing
 dots floats beside it.
 
-![Mid-trick: jumping, backflipping, spinning, a wheelie and the thought bubbles](docs/screenshots/agents-panel-tricks.png)
+![Mid-trick: jumping, shuffling and squatting, with the thought bubbles](docs/screenshots/agents-panel-tricks.png)
 
 *One frame 1.5 seconds into the loop, rendered from the mod's own SVGs.*
 

@@ -62,6 +62,7 @@ test('each agent in a run is a different animated character', async ($, on) => {
   const source = String((avatars[0]?.props as { source?: string }).source)
   expect(source.match(/additive="sum"/g)?.length).toBeGreaterThanOrEqual(2)
   expect(source).toContain('<ellipse')
+  expect(source).not.toMatch(/type="rotate"[^>]*additive="sum"/)
   expect(source).toContain('fill="#F4F4F4"')
   await ui.unmount()
 })

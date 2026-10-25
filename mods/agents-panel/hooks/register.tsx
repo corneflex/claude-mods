@@ -180,7 +180,7 @@ function characterParts(c: Character, moving: boolean): Part {
           `<line x1="13" y1="8" x2="13.5" y2="2.5" stroke="#C9A36B" stroke-width="0.4"/>` +
           `<ellipse cx="13.5" cy="2" rx="2.4" ry="0.8" fill="none" stroke="#C9A36B" stroke-width="0.45">` +
           `${a('<animate attributeName="rx" values="2.4;0.4;2.4" dur="0.6s" repeatCount="indefinite"/>')}</ellipse>`,
-        body: a(move('0 0;0 -0.8;0 0', 0.5) + spin('-3 8 10;3 8 10;-3 8 10', 1, ' additive="sum"')),
+        body: a(move('0 0;0 -0.8;0 0', 0.5) + move('-0.3 0;0.3 0;-0.3 0', 1, ' additive="sum"')),
         arm: a(move('0 0;0 -1.5;0 0', 0.6)),
       }
     case 'police':
@@ -205,7 +205,7 @@ function characterParts(c: Character, moving: boolean): Part {
           [0, 1].map(i =>
             `<g opacity="0">${a(move(`0 0;${-0.5 + i} -6`, 2, ` begin="${i}s"`))}${a(fade('0;1;0', 2, ` begin="${i}s"`))}` +
             `<path d="M1.5 12 l-1.2 -1.2 a0.7 0.7 0 0 1 1.2 -0.9 a0.7 0.7 0 0 1 1.2 0.9 z" fill="#F07178"/></g>`).join(''),
-        body: a(spin('-4 8 10;4 8 10;-4 8 10', 1.6)),
+        body: a(move('-0.4 0;0.4 0;-0.4 0', 1.6)),
         arm: '',
       }
     case 'biker':
@@ -220,7 +220,7 @@ function characterParts(c: Character, moving: boolean): Part {
           `<rect x="5" y="11.8" width="7" height="0.5" fill="#C8453A"/>` +
           a([9.6, 11, 12.4].map((y, i) =>
             `<rect x="0" y="${y - 3}" width="2" height="0.3" fill="#9AA3AD">${move('2 0;-2 0', 0.5, ` begin="${i * 0.15}s"`)}${fade('0;1;0', 0.5, ` begin="${i * 0.15}s"`)}</rect>`).join('')),
-        body: a(spin('-8 8 12;-5 8 12;-8 8 12', 0.4) + move('0 0;0 -0.3;0 0', 0.3, ' additive="sum"')),
+        body: a(move('0 0;0 -0.3;0 0', 0.3)),
         arm: '',
       }
     case 'worker':
@@ -247,7 +247,7 @@ function characterParts(c: Character, moving: boolean): Part {
           `<rect x="7.8" y="2.6" width="0.4" height="2" fill="#DDE3EA"/><circle cx="8" cy="2.4" r="0.5" fill="#E5534B">${a(fade('1;0.2;1', 1))}</circle>` +
           [[1, 2], [14, 4], [2, 10], [15, 11]].map(([x, y], i) =>
             `<circle cx="${x}" cy="${y}" r="0.35" fill="#FFF6C8">${a(fade('0.2;1;0.2', 1.4, ` begin="${i * 0.35}s"`))}</circle>`).join(''),
-        body: a(move('0 0;0 -1.2;0 0', 2.4) + spin('-6 8 9;6 8 9;-6 8 9', 3.2, ' additive="sum"')),
+        body: a(move('0 0;0 -1.2;0 0', 2.4) + move('-0.4 0;0.4 0;-0.4 0', 3.2, ' additive="sum"')),
         arm: a(move('0 0;0 -1;0 0', 2.4)),
       }
   }
@@ -271,15 +271,15 @@ function eventSvg(kind: 'commit' | 'push') {
 // Tricks play in two one-second windows of a 6 s loop, on top of each character's own move.
 const TRICK_LOOP = 6
 const TRICK_WINDOWS = [[1, 2], [4, 5]] as const
-type Trick = 'jump' | 'spin' | 'backflip' | 'dance' | 'wheelie' | 'shake'
+type Trick = 'jump' | 'doublejump' | 'dance' | 'shuffle' | 'squat' | 'stomp'
 const TRICKS: Record<Character, [Trick, Trick]> = {
   digger: ['jump', 'dance'],
-  cowboy: ['backflip', 'jump'],
-  police: ['dance', 'spin'],
-  nurse: ['spin', 'jump'],
-  biker: ['wheelie', 'jump'],
-  worker: ['shake', 'jump'],
-  astronaut: ['spin', 'backflip'],
+  cowboy: ['doublejump', 'shuffle'],
+  police: ['dance', 'squat'],
+  nurse: ['shuffle', 'jump'],
+  biker: ['jump', 'stomp'],
+  worker: ['stomp', 'jump'],
+  astronaut: ['doublejump', 'squat'],
 }
 
 // One animateTransform that rests at `rest` outside its window and plays `values` inside it.
@@ -292,21 +292,21 @@ function inWindow(type: string, rest: string, values: string[], [from, to]: read
   return `<animateTransform attributeName="transform" type="${type}" values="${all}" keyTimes="${keyTimes}" dur="${TRICK_LOOP}s" repeatCount="indefinite" additive="sum"/>`
 }
 
+// Every trick moves the character in straight lines only: no rotating or flipping.
 function trickSvg(trick: Trick, w: readonly [number, number]) {
   switch (trick) {
     case 'jump':
       return inWindow('translate', '0 0', ['0 -2.2', '0 -3.2', '0 -2.2', '0 0.3'], w)
-    case 'spin':
-      return inWindow('rotate', '0 8 9', ['90 8 9', '180 8 9', '270 8 9', '360 8 9'], w)
-    case 'backflip':
-      return inWindow('translate', '0 0', ['0 -2.5', '0 -3.5', '0 -2.5', '0 0'], w) +
-        inWindow('rotate', '0 8 9', ['-90 8 9', '-180 8 9', '-270 8 9', '-360 8 9'], w)
+    case 'doublejump':
+      return inWindow('translate', '0 0', ['0 -2.4', '0 0.2', '0 -3', '0 0.3'], w)
     case 'dance':
       return inWindow('translate', '0 0', ['-1.2 0', '0 -0.8', '1.2 0', '0 -0.8', '-1.2 0', '0 0'], w)
-    case 'wheelie':
-      return inWindow('rotate', '0 5 12.6', ['-12 5 12.6', '-24 5 12.6', '-24 5 12.6', '-10 5 12.6'], w)
-    case 'shake':
-      return inWindow('rotate', '0 8 9', ['-12 8 9', '12 8 9', '-12 8 9', '12 8 9', '-6 8 9'], w)
+    case 'shuffle':
+      return inWindow('translate', '0 0', ['-1.5 0', '1.5 0', '-1.5 0', '1.5 0'], w)
+    case 'squat':
+      return inWindow('translate', '0 0', ['0 0.8', '0 0.8', '0 -1.2', '0 0'], w)
+    case 'stomp':
+      return inWindow('translate', '0 0', ['0 -0.7', '0 0', '0 -0.7', '0 0', '0 -0.7', '0 0'], w)
   }
 }
 
@@ -335,7 +335,7 @@ function avatarSvg(index: number, sprites: Sprites, moving: boolean, event?: 'co
     `<g>${part.arm}${body.R ?? ''}</g>${body.F ?? ''}${body.G ?? ''}${Object.values(hat).join('')}</g></g>`
   const [first, second] = TRICKS[c]
   const tricks = live ? trickSvg(first, TRICK_WINDOWS[0]) + trickSvg(second, TRICK_WINDOWS[1]) : ''
-  const airborne = (t: Trick) => t === 'jump' || t === 'backflip'
+  const airborne = (t: Trick) => t === 'jump' || t === 'doublejump'
   const shadowShrink = live
     ? TRICK_WINDOWS.map((w, i) => {
         const t = i === 0 ? first : second
