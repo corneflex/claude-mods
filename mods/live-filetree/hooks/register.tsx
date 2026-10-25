@@ -3,7 +3,8 @@ import type { EngineInterface, Register, RenderChildren } from 'claude-code'
 
 import type { Activity, Entry, FileAction, GitFile, GitInfo, Preview, Touched, View } from '../types'
 import type { RowSpec, RowsProps, Seg } from './rows'
-import { FOLDER, FOLDER_OPEN, iconFor } from './icons'
+import { folderIcon, iconFor } from './icons'
+import type { IconStyle } from './icons'
 
 const PANE = 'live-filetree'
 
@@ -421,7 +422,9 @@ function startPolling($: EngineInterface) {
 const READ_TOOLS = new Set(['Read'])
 const EDIT_TOOLS = new Set(['Edit', 'MultiEdit'])
 
-export const register: Register = on => {
+export const register: Register = (on, options) => {
+  const iconSetting = typeof options.icons === 'string' ? options.icons : 'auto'
+
   on('session.start', async ($, e, next) => {
     const started = await next(e)
     const cwd = e.cwd
@@ -556,6 +559,7 @@ export const register: Register = on => {
     const ui = $.ui.resolve(e)
     const { Box, Text, Button, Code } = ui
     const Client = e.surface === 'desktop' || e.surface === 'terminal' ? $.ui.resolve(e).Client : undefined
+    const iconStyle: IconStyle = iconSetting === 'nerd' || (iconSetting === 'auto' && e.surface === 'terminal') ? 'nerd' : 'emoji'
     const Svg = e.surface === 'terminal' ? undefined : $.ui.resolve(e).Svg
     const Input = e.surface === 'mobile' ? undefined : $.ui.resolve(e).Input
     const cwd = await read($, project)
@@ -694,7 +698,8 @@ export const register: Register = on => {
       const done = touchedByPath.get(path)
       const c = g.changed[path]
       const n = basename(path)
-      const left: Seg[] = [{ t: '  '.repeat(opts.indent ?? 0) }, { t: `${iconFor(n)} ` }]
+      const icon = iconFor(n, iconStyle)
+      const left: Seg[] = [{ t: '  '.repeat(opts.indent ?? 0) }, { t: `${icon.t} `, c: icon.c }]
       if (t?.verb) left.push({ t: n, sh: t.verb, b: true })
       else left.push({ t: n, b: true, c: c ? C.uncommitted : done?.action === 'read' ? C.read : undefined })
       if (opts.dir) left.push({ t: `  ${relative(cwd, dirname(path)) || '.'}`, dim: true })
@@ -781,7 +786,7 @@ export const register: Register = on => {
         <Box flexDirection="column">
           <Box flexDirection="row" alignItems="center" gap={1} backgroundColor={DIFF.barBg} paddingX={1}>
             <Button key="back" label="← Files" hotkey="b" onPress={() => void update($, preview, () => null)} />
-            <Text>{iconFor(basename(shown.path))}</Text>
+            <Text color={iconFor(basename(shown.path), iconStyle).c}>{iconFor(basename(shown.path), iconStyle).t}</Text>
             <Text bold>{basename(shown.path)}</Text>
             <Text dimColor wrap="truncate-end">{relative(cwd, dirname(shown.path)) || '.'}</Text>
             <Box flexGrow={1} />
@@ -903,7 +908,7 @@ export const register: Register = on => {
             const colour = hasLive(path) ? C.read : hasChanges(path) ? C.uncommitted : C.folder
             rows.push({
               id: `d:${path}`,
-              left: [{ t: '  '.repeat(depth) }, { t: isOpen ? '▾ ' : '▸ ', dim: true }, { t: `${isOpen ? FOLDER_OPEN : FOLDER} ` }, { t: entry.name, c: colour, b: true }],
+              left: [{ t: '  '.repeat(depth) }, { t: isOpen ? '▾ ' : '▸ ', dim: true }, { t: `${folderIcon(isOpen, iconStyle).t} `, c: folderIcon(isOpen, iconStyle).c }, { t: entry.name, c: colour, b: true }],
               right: [],
             })
             if (isOpen) walk(path, depth + 1)

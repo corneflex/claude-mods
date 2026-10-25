@@ -169,11 +169,16 @@ Below it are the branch and how far it's ahead (`main ↑1`), then `clean, nothi
 - *Up a folder*, *Back to project* and *Hide / Show hidden files*.
 
 **Claude touched.** Every file Claude read, edited, created or committed during the current prompt. Each one
-shows a file-type icon (🟨 JS, 🔷 TS, 📝 Markdown, 🐍 Python, 🦀 Rust, 🧾 JSON, 🐳 Dockerfile, 🧪 tests…), its
-folder, `+/-` line counts, and a coloured text badge with no background: `◉ Opened`, `✎ Edited`,
+shows a file-type icon, its folder, `+/-` line counts, and a coloured text badge with no background: `◉ Opened`, `✎ Edited`,
 `✚ Created` or `✓ Committed`.
 
-**All files.** The project tree, with 📁/📂 folders, file-type icons, and each file's date or size.
+**All files.** The project tree, with folder and file-type icons, and each file's date or size.
+
+**Icons.** In the terminal, files show Nerd Font Material Design glyphs (`nf-md-*`) coloured in the Atom
+Material Icons palette: yellow for JavaScript, blue for TypeScript, cyan for React, and so on. This needs a
+[Nerd Font](https://www.nerdfonts.com) as the terminal font. The desktop app's font has no Nerd glyphs,
+so there it shows emoji instead (🟨 JS, 🔷 TS, 📝 Markdown, 🐍 Python…). The `icons` option (`/config`, or
+`pluginConfigs` in `~/.claude/settings.json`) sets `auto` (default), `nerd` (always glyphs) or `emoji`.
 - Folders open by themselves down to the file Claude is working on.
 - Files and folders with uncommitted changes are yellow, with their git status code and `+/-` counts.
 

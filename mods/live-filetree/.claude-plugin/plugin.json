@@ -1,9 +1,22 @@
 {
   "name": "live-filetree",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A Files pane that shows what Claude is reading, editing and creating right now, with git status, live highlights and click-to-diff.",
   "author": {
     "name": "corneflex"
   },
-  "types": "./types/index.d.ts"
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "icons": {
+      "type": "string",
+      "title": "File icons",
+      "description": "auto: Nerd Font Material glyphs in the terminal, emoji in the desktop app. nerd: always glyphs (needs a Nerd Font). emoji: always emoji.",
+      "default": "auto",
+      "options": [
+        "auto",
+        "nerd",
+        "emoji"
+      ]
+    }
+  }
 }
