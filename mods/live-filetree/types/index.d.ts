@@ -41,6 +41,7 @@ export type Preview = {
   mode: 'diff' | 'file' | 'note'
   text: string
   split?: boolean
+  source?: boolean
 }
 
 declare module 'claude-code' {

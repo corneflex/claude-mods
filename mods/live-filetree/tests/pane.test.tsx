@@ -73,8 +73,11 @@ test('reads and edits show in the status card, touched list and tree', async ($,
     // A press inside the Client opens the full-screen diff, inline in a narrow pane.
     await ui.post({ press: `f:${ROOT}/src/client.js` }, { in: 'touched' })
     expect(await ui.find({ type: 'Text', text: /git diff HEAD -- src\/client\.js/ })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: 'const a = 1' })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: 'const b = 1' })).toBeDefined()
+    // Diff lines carry syntax colours from the vendored Prism, in VS Code's Dark+ palette.
+    const coloured = (text: string, colour: string) =>
+      ui.findAll({ type: 'Text', text }).then(all => all.find(x => (x.props as { color?: string }).color === colour))
+    expect(await coloured('const', '#569CD6')).toBeDefined()
+    expect(await coloured('1', '#B5CEA8')).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /ALL FILES/ })).toBeUndefined()
 
     // Side by side shows HEAD against the working tree; back returns to the tree.
@@ -82,12 +85,20 @@ test('reads and edits show in the status card, touched list and tree', async ($,
     expect(await ui.find({ type: 'Text', text: /\(HEAD\)  ↔/ })).toBeDefined()
     await ui.press({ key: 'back' })
     expect(await ui.find({ type: 'Text', text: /ALL FILES/ })).toBeDefined()
+
+    // An unchanged Markdown file opens rendered; Source shows it in the numbered, coloured reader.
+    await ui.post({ press: `f:${ROOT}/README.md` }, { in: 'touched' })
+    expect(await ui.find({ type: 'Markdown' })).toBeDefined()
+    await ui.press({ key: 'mdview' })
+    expect(await ui.find({ type: 'Markdown' })).toBeUndefined()
+    expect(await ui.find({ type: 'Text', text: '    1  ' })).toBeDefined()
+    await ui.press({ key: 'back' })
     await ui.unmount()
   }
 
   // Surfaces without Client still list the rows and open the diff with a plain button.
   const plain = await $.ui.mount({ ...PANE, surface: 'vscode' })
   await plain.press({ key: `touched:f:${ROOT}/src/client.js` })
-  expect(await plain.find({ type: 'Text', text: 'const b = 1' })).toBeDefined()
+  expect(await plain.find({ type: 'Text', text: 'const' })).toBeDefined()
   await plain.unmount()
 })

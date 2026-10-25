@@ -4,6 +4,8 @@ import type { EngineInterface, Register, RenderChildren } from 'claude-code'
 import type { Activity, Entry, FileAction, GitFile, GitInfo, Preview, Touched, View } from '../types'
 import type { RowSpec, RowsProps, Seg } from './rows'
 import { iconFor } from './icons'
+import { highlightLines, langFor } from './highlight'
+import type { Tok } from './highlight'
 
 const PANE = 'live-filetree'
 
@@ -175,7 +177,7 @@ const DIFF = {
   hunk: '#79B8FF',
 }
 
-type DiffLine = { kind: 'ctx' | 'del' | 'add' | 'hunk'; text: string; old?: number; new?: number }
+type DiffLine = { kind: 'ctx' | 'del' | 'add' | 'hunk'; text: string; old?: number; new?: number; toks?: Tok[] }
 
 function parseDiff(text: string): DiffLine[] {
   const out: DiffLine[] = []
@@ -200,6 +202,26 @@ function parseDiff(text: string): DiffLine[] {
     }
   }
   return out
+}
+
+// Colours each line with the syntax of its side: a hunk's old lines (context and removals) and new lines
+// (context and additions) are highlighted as two blocks, so multi-line strings and comments come out right.
+function colourDiff(lines: DiffLine[], lang: string | undefined) {
+  let i = 0
+  while (i < lines.length) {
+    const start = lines[i]?.kind === 'hunk' ? ++i : i
+    let end = start
+    while (end < lines.length && lines[end]?.kind !== 'hunk') end++
+    const hunk = lines.slice(start, end)
+    const oldSide = hunk.filter(l => l.kind !== 'add')
+    const newSide = hunk.filter(l => l.kind !== 'del')
+    const oldToks = highlightLines(oldSide.map(l => l.text).join('\n'), lang)
+    const newToks = highlightLines(newSide.map(l => l.text).join('\n'), lang)
+    oldSide.forEach((l, k) => { if (l.kind === 'del') l.toks = oldToks[k] })
+    newSide.forEach((l, k) => { l.toks = newToks[k] })
+    i = end
+  }
+  return lines
 }
 
 // Side by side: context on both sides; a run of removals faces the run of additions that follows it.
@@ -388,7 +410,7 @@ async function loadPreview($: EngineInterface, path: string, from: Preview['from
     result = text.includes('Binary files')
       ? { path, from, mode: 'note', text: 'Binary file changed.' }
       : text
-        ? { path, from, mode: 'diff', text: text.split('\n').slice(0, 1500).join('\n') }
+        ? { path, from, mode: 'diff', text: text.split('\n').slice(0, 1200).join('\n') }
         : result
   } else {
     try {
@@ -401,7 +423,7 @@ async function loadPreview($: EngineInterface, path: string, from: Preview['from
           path,
           from,
           mode: 'file',
-          text: lines.slice(0, 300).join('\n') + (lines.length > 300 ? `\n… ${lines.length - 300} more lines` : ''),
+          text: lines.slice(0, 1000).join('\n') + (lines.length > 1000 ? `\n… ${lines.length - 1000} more lines` : ''),
         }
       }
     } catch {
@@ -554,7 +576,7 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const ui = $.ui.resolve(e)
-    const { Box, Text, Button, Code } = ui
+    const { Box, Text, Button, Markdown } = ui
     const Client = e.surface === 'desktop' || e.surface === 'terminal' ? $.ui.resolve(e).Client : undefined
     const Svg = e.surface === 'terminal' ? undefined : $.ui.resolve(e).Svg
     const Input = e.surface === 'mobile' ? undefined : $.ui.resolve(e).Input
@@ -747,7 +769,9 @@ export const register: Register = on => {
       const c = g.changed[shown.path]
       const width = e.props.bodyColumns
       const split = shown.split ?? width >= 110
-      const lines = shown.mode === 'diff' ? parseDiff(shown.text) : []
+      const lang = langFor(shown.path)
+      const lines = shown.mode === 'diff' ? colourDiff(parseDiff(shown.text), lang) : []
+      const isMarkdown = lang === 'markdown'
       const num = (n?: number) => (n === undefined ? '' : String(n)).padStart(5) + ' '
       const line = (key: string, l: DiffLine | undefined, side: 'old' | 'new' | 'both') => {
         const bg = !l ? DIFF.empty : l.kind === 'del' ? DIFF.delBg : l.kind === 'add' ? DIFF.addBg : undefined
@@ -757,7 +781,7 @@ export const register: Register = on => {
           <Box key={key} flexDirection="row" height={1} overflow="hidden" backgroundColor={bg} flexGrow={1} width={side === 'both' ? undefined : '50%'}>
             <Text color={DIFF.gutter}>{gutter.padEnd(side === 'both' ? 12 : 6)}</Text>
             <Text color={l?.kind === 'del' ? C.del : l?.kind === 'add' ? C.add : DIFF.gutter}>{`${mark} `}</Text>
-            <Text color={DIFF.text} wrap="truncate-end">{l?.text ?? ''}</Text>
+            <Text wrap="truncate-end">{(l?.toks ?? (l ? [{ t: l.text, c: DIFF.text }] : [])).map(k => <Text color={k.c}>{k.t}</Text>)}</Text>
           </Box>
         )
       }
@@ -778,6 +802,14 @@ export const register: Register = on => {
       } else if (shown.mode === 'diff') {
         lines.forEach((l, i) => body.push(l.kind === 'hunk' ? hunk(`h${i}`, l.text) : line(`i${i}`, l, 'both')))
       }
+      const reader = shown.mode === 'file' && !(isMarkdown && !shown.source)
+        ? highlightLines(shown.text, lang).map((toks, i) => (
+            <Box key={`c${i}`} flexDirection="row" height={1} overflow="hidden">
+              <Text color={DIFF.gutter}>{`${String(i + 1).padStart(5)}  `}</Text>
+              <Text wrap="truncate-end">{toks.map(k => <Text color={k.c}>{k.t}</Text>)}</Text>
+            </Box>
+          ))
+        : null
       return (
         <Box flexDirection="column">
           <Box flexDirection="row" alignItems="center" gap={1} backgroundColor={DIFF.barBg} paddingX={1}>
@@ -787,6 +819,14 @@ export const register: Register = on => {
             <Text dimColor wrap="truncate-end">{relative(cwd, dirname(shown.path)) || '.'}</Text>
             <Box flexGrow={1} />
             {c ? <Text><Text color={C.add}>{`+${c.adds}`}</Text><Text color={C.del}>{` -${c.dels}`}</Text></Text> : null}
+            {shown.mode === 'file' && isMarkdown && (
+              <Button
+                key="mdview"
+                label={shown.source ? 'Preview' : 'Source'}
+                hotkey="p"
+                onPress={() => void update($, preview, p => (p ? { ...p, source: !p.source } : p))}
+              />
+            )}
             {shown.mode === 'diff' && (
               <Button
                 key="layout"
@@ -805,7 +845,8 @@ export const register: Register = on => {
           </Box>
           <Box flexDirection="column" backgroundColor={DIFF.editorBg}>
             {shown.mode === 'diff' ? body : null}
-            {shown.mode === 'file' ? <Code source={shown.text} path={shown.path} startLine={1} wrap="truncate-end" /> : null}
+            {shown.mode === 'file' && isMarkdown && !shown.source ? <Box padding={1}><Markdown text={shown.text} /></Box> : null}
+            {reader}
             {shown.mode === 'note' ? <Box padding={1}><Text dimColor>{shown.text}</Text></Box> : null}
           </Box>
         </Box>

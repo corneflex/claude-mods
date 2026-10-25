@@ -181,19 +181,30 @@ orange for editing, green for creating.
 
 The rows animate inside the pane's own drawing, so the tree no longer flickers while it updates.
 
-**Diff screen.** Click any file to open a full-screen diff in the style of VS Code:
+**Diff screen.** Click any file with changes to open a full-screen diff in the style of VS Code:
 - **Header:** a *← Files* button (or `b`) that returns to the tree, the file's type label, name, folder and
   `+/-` counts.
-- **Body:** line numbers in the gutter, removed lines on red and added lines on green, and blue hunk headers.
+- **Body:** line numbers in the gutter, removed lines on red, added lines on green, blue hunk headers, and
+  **syntax colours** on every line in VS Code's Dark+ theme. Each hunk's old and new sides are highlighted as
+  whole blocks, so multi-line strings and comments colour correctly.
 - **Layout:** *Side by side* (or `v`) puts HEAD on the left and the working tree on the right; *Inline*
   shows one column. Side by side is the default when the pane is wide.
-- **Other files:** a new file shows as all-added lines, and a file with no changes opens in a
-  syntax-highlighted view.
+- **New files:** show as all-added lines.
+
+**Code reader.** A file with no changes opens in a reader with line numbers and the same Dark+ syntax colours
+(up to 1,000 lines). It covers about 25 languages, including JS/TS/JSX/TSX, JSON, Markdown, Python, shell,
+YAML, TOML, Rust, Go, Java, Kotlin, Swift, C/C++, C#, Ruby, PHP, SQL, HTML/XML and CSS.
+
+**Markdown reader.** A Markdown file with no changes opens rendered, with headings, lists, tables, code and
+links, drawn by Claude Code's own Markdown renderer. *Source* (or `p`) switches to the coloured source.
+
+Syntax highlighting uses [Prism](https://prismjs.com) 1.29.0 (MIT). A mod can't install npm packages, so its
+core and language grammars are bundled in `mods/live-filetree/hooks/vendor/prism.js`, with its licence beside
+it in `PRISM-LICENSE`.
 
 Git status refreshes every 5 seconds and after every edit, write or shell command. The mod also registers
 a read-only tool, `mcp__live-filetree__state`, which returns what the pane holds as JSON. The row animations
-run in the desktop app and the terminal; VS Code shows the same rows without animation. It has no
-third-party dependencies.
+run in the desktop app and the terminal; VS Code shows the same rows without animation. Its one third-party dependency is the bundled Prism (MIT).
 
 ---
 
