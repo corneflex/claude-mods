@@ -1,9 +1,46 @@
 {
   "name": "agents-panel",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A live Agents pane beside the chat: each subagent's model, effort, tokens, cost, time and progress, grouped by run.",
   "types": "./types/index.d.ts",
   "author": {
     "name": "corneflex"
+  },
+  "userConfig": {
+    "animation": {
+      "type": "string",
+      "title": "Sprite animation",
+      "description": "How the agent sprites move while their agent runs: mixed gives each agent a different one.",
+      "default": "mixed",
+      "options": [
+        "mixed",
+        "bob",
+        "wave",
+        "hop",
+        "blink",
+        "hat",
+        "wiggle",
+        "walk",
+        "off"
+      ]
+    },
+    "bodyColor": {
+      "type": "string",
+      "title": "Sprite body colour",
+      "description": "Hex colour of the critters' bodies, e.g. #E07F63.",
+      "default": "#E07F63"
+    },
+    "hatColors": {
+      "type": "string",
+      "title": "Sprite hat colours",
+      "description": "Comma-separated hex colours, one per agent in turn.",
+      "default": "#8A5A3C,#B8B8C8,#C8453A,#E2B93B,#7E5BC8,#3FA7A0"
+    },
+    "animateFinished": {
+      "type": "boolean",
+      "title": "Animate finished agents",
+      "description": "Keep sprites moving after their agent finishes.",
+      "default": false
+    }
   }
 }

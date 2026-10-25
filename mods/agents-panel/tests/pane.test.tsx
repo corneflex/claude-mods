@@ -38,3 +38,35 @@ test('a spawned agent shows as a running row with totals', async ($, on) => {
     await ui.unmount()
   }
 })
+
+const setup = async ($: Parameters<Parameters<typeof test>[1]>[0], on: Parameters<Parameters<typeof test>[1]>[1]) => {
+  on('command.register', () => ({ value: { command: 'agents-panel' } }))
+  on('tool.register', () => ({ value: {} }))
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  let n = 0
+  on('agent.spawn', () => ({ model: 'claude-opus-5-5', agentId: `a${++n}` }))
+  on('clock.now', () => ({ value: 1_000_000 }))
+  on('clock.every', () => ({ value: undefined }))
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  await $.agent.spawn({ prompt: 'x', description: 'First agent' })
+  await $.agent.spawn({ prompt: 'y', description: 'Second agent' })
+}
+
+test('each running agent gets its own sprite animation', async ($, on) => {
+  await setup($, on)
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const alts = (await ui.findAll({ type: 'Svg' })).map(s => (s.props as { alt?: string }).alt)
+  expect(alts).toContain('agent avatar, bob animation')
+  expect(alts).toContain('agent avatar, wave animation')
+  await ui.unmount()
+})
+
+test('the animation option sets one style for every sprite', { options: { animation: 'hop' } }, async ($, on) => {
+  await setup($, on)
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const alts = (await ui.findAll({ type: 'Svg' })).map(s => (s.props as { alt?: string }).alt)
+  expect(alts.filter(a => a === 'agent avatar, hop animation')).toHaveLength(2)
+  expect(alts).not.toContain('agent avatar, bob animation')
+  await ui.unmount()
+})

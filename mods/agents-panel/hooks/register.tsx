@@ -106,31 +106,79 @@ function money(n: number) {
   return `≈$${n < 10 ? n.toFixed(2) : n.toFixed(1)}`
 }
 
-function avatarSvg(index: number) {
-  const hat = HATS[index % HATS.length] ?? BODY
+const ANIMATIONS = ['bob', 'wave', 'hop', 'blink', 'hat', 'wiggle', 'walk'] as const
+type Animation = (typeof ANIMATIONS)[number]
+
+type Sprites = { animation: string; body: string; hats: string[]; animateFinished: boolean }
+
+// Colours come from user settings and go into SVG markup: accept hex only.
+function hexOr(value: unknown, fallback: string) {
+  return typeof value === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(value.trim()) ? value.trim() : fallback
+}
+
+function spritesFrom(options: Record<string, unknown>): Sprites {
+  const hats = typeof options.hatColors === 'string'
+    ? options.hatColors.split(',').map(c => hexOr(c, '')).filter(Boolean)
+    : []
+  return {
+    animation: typeof options.animation === 'string' ? options.animation : 'mixed',
+    body: hexOr(options.bodyColor, BODY),
+    hats: hats.length ? hats : HATS,
+    animateFinished: options.animateFinished === true,
+  }
+}
+
+function animationFor(index: number, sprites: Sprites): Animation | undefined {
+  if (sprites.animation === 'off') return undefined
+  const fixed = ANIMATIONS.find(a => a === sprites.animation)
+  return fixed ?? ANIMATIONS[index % ANIMATIONS.length]
+}
+
+const loop = (attr: string, values: string, dur: number, extra = '') =>
+  `<animateTransform attributeName="transform" type="${attr}" values="${values}" dur="${dur}s" repeatCount="indefinite"${extra}/>`
+
+function avatarSvg(index: number, sprites: Sprites, animation?: Animation) {
+  const hat = sprites.hats[index % sprites.hats.length] ?? sprites.body
   const caps = [
     ['..HHHHHH..', '.HHHHHHHH.'],
     ['...HHHH...', '.HHHHHHHH.'],
     ['..HHHHHH..', 'HHHHHHHH..'],
-  ][Math.floor(index / HATS.length) % 3] ?? []
+  ][Math.floor(index / sprites.hats.length) % 3] ?? []
   const rows = [
     ...caps,
     '.BBBBBBBB.',
     '.BEBBBBEB.',
-    'BBBBBBBBBB',
+    'LBBBBBBBBR',
     '.BBBBBBBB.',
-    '.B.B..B.B.',
-    '.B.B..B.B.',
+    '.F.F..G.G.',
+    '.F.F..G.G.',
   ]
-  const fill: Partial<Record<string, string>> = { H: hat, B: BODY, E: '#2A1A14' }
-  const rects = rows
-    .flatMap((row, y) =>
-      [...row].map((c, x) =>
-        fill[c] ? `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${fill[c]}"/>` : '',
-      ),
-    )
-    .join('')
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 8" shape-rendering="crispEdges">${rects}</svg>`
+  // Each letter is a layer the animations move on its own: H hat, E eyes, L/R arms, F/G legs.
+  const colour: Record<string, string> = { H: hat, E: '#2A1A14' }
+  const layers: Record<string, string> = {}
+  rows.forEach((row, y) =>
+    [...row].forEach((c, x) => {
+      if (c === '.') return
+      layers[c] = (layers[c] ?? '') + `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${colour[c] ?? sprites.body}"/>`
+    }),
+  )
+  const anim: Partial<Record<string, string>> = {}
+  if (animation === 'bob') anim.all = loop('translate', '0 0;0 -0.7;0 0', 0.8)
+  if (animation === 'hop') anim.all = loop('translate', '0 0;0 -1.9;0 0;0 0', 1, ' keyTimes="0;0.3;0.6;1"')
+  if (animation === 'wiggle') anim.all = loop('rotate', '-9 5 4;9 5 4;-9 5 4', 0.7)
+  if (animation === 'wave') anim.R = loop('translate', '0 0;0 -2;0 -1;0 -2;0 0', 0.9)
+  if (animation === 'hat') anim.H = loop('rotate', '-14 5 2;14 5 2;-14 5 2', 0.9)
+  if (animation === 'walk') {
+    anim.F = loop('translate', '0 0;0 -0.8;0 0', 0.5)
+    anim.G = loop('translate', '0 0;0 -0.8;0 0', 0.5, ' begin="0.25s"')
+    anim.all = loop('translate', '0 0;0 -0.3;0 0', 0.25)
+  }
+  const blink = animation === 'blink'
+    ? '<animate attributeName="opacity" values="1;1;0;1" keyTimes="0;0.88;0.94;1" dur="2.4s" repeatCount="indefinite"/>'
+    : ''
+  const layer = (key: string, extra = '') => `<g>${layers[key] ?? ''}${anim[key] ?? ''}${extra}</g>`
+  const body = layer('B') + layer('H') + layer('E', blink) + layer('L') + layer('R') + layer('F') + layer('G')
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -2 12 10" shape-rendering="crispEdges"><g>${body}${anim.all ?? ''}</g></svg>`
 }
 
 function barSvg(fraction: number, color: string) {
@@ -157,7 +205,9 @@ function startTicking($: EngineInterface) {
   })
 }
 
-export const register: Register = on => {
+export const register: Register = (on, options) => {
+  const sprites = spritesFrom(options as Record<string, unknown>)
+
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'agents-panel',
@@ -339,9 +389,21 @@ export const register: Register = on => {
         <Box flexDirection="column" key={a.id}>
           <Box flexDirection="row" gap={1} paddingY={isTerminal ? 0 : 'sm'}>
             {Svg ? (
-              <Svg source={avatarSvg(a.avatar)} alt="agent avatar" width={34} height={28} />
+              (() => {
+                const moving = a.status === 'running' || sprites.animateFinished
+                const animation = moving ? animationFor(a.avatar, sprites) : undefined
+                return (
+                  <Svg
+                    source={avatarSvg(a.avatar, sprites, animation)}
+                    alt={animation ? `agent avatar, ${animation} animation` : 'agent avatar'}
+                    width={34}
+                    height={28}
+                    isInteractive={animation ? true : undefined}
+                  />
+                )
+              })()
             ) : (
-              <Text color={HATS[a.avatar % HATS.length]}>▟▙</Text>
+              <Text color={sprites.hats[a.avatar % sprites.hats.length]}>▟▙</Text>
             )}
             <Box flexDirection="column" flexGrow={1} flexShrink={1}>
               <Box flexDirection="row" justifyContent="space-between">

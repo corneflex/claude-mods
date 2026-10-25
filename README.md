@@ -80,9 +80,27 @@ JSON so Claude can check the numbers.
 In testing, tokens, tool counts and durations matched Claude Code's own completion reports to within about
 100 tokens and 0.3 seconds.
 
+### Sprites
+
+Each running agent's critter moves, and in the same run every agent gets a different animation: bob, wave,
+hop, blink, hat tip, wiggle or walk. When the agent finishes, its critter stops.
+
+To customize them, use the plugin's settings: `/config` in a terminal, or `pluginConfigs` in
+`~/.claude/settings.json`:
+
+| Option | Default | What it does |
+|---|---|---|
+| `animation` | `mixed` | `mixed` gives each agent its own animation. `bob`, `wave`, `hop`, `blink`, `hat`, `wiggle` or `walk` uses one style for all, and `off` keeps them still. |
+| `bodyColor` | `#E07F63` | The critters' body colour (hex). |
+| `hatColors` | six colours | Comma-separated hex colours, used in turn for each agent. |
+| `animateFinished` | `false` | Keeps sprites moving after their agent finishes. |
+
+A colour that isn't a hex value is ignored, and the default is used instead.
+
 ### Surfaces
 
-The pane draws on the desktop app (with the avatars and bars as SVG) and in the terminal (text bars).
+The pane draws on the desktop app (with the avatars and bars as SVG, animated) and in the terminal (text
+bars, no animation).
 
 ---
 
