@@ -21,7 +21,16 @@ const DARK_PLUS: Record<string, string> = {
   tag: '#569CD6', selector: '#D7BA7D',
   title: '#569CD6', bold: '#569CD6', italic: '#CE9178', code: '#CE9178', 'code-snippet': '#CE9178', list: '#6796E6',
   operator: PLAIN, punctuation: PLAIN,
+  // Code inside `${…}` reads as code again, with the braces in keyword blue.
+  interpolation: PLAIN, 'interpolation-punctuation': '#569CD6',
 }
+
+// VS Code colours control-flow and module keywords purple, other keywords blue.
+const CONTROL = new Set([
+  'if', 'else', 'return', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'try', 'catch',
+  'finally', 'throw', 'await', 'yield', 'import', 'export', 'from', 'default', 'match', 'loop', 'elif',
+  'except', 'raise', 'with', 'pass', 'goto',
+])
 
 const LANGS: Record<string, string> = {
   js: 'javascript', mjs: 'javascript', cjs: 'javascript', jsx: 'jsx',
@@ -41,9 +50,11 @@ export function langFor(path: string): string | undefined {
   return LANGS[name.includes('.') ? name.slice(name.lastIndexOf('.') + 1) : '']
 }
 
-function colourOf(types: string[]) {
+function colourOf(types: string[], text: string) {
   for (let i = types.length - 1; i >= 0; i--) {
-    const c = DARK_PLUS[types[i] ?? '']
+    const type = types[i] ?? ''
+    if (type === 'keyword' && CONTROL.has(text.trim())) return '#C586C0'
+    const c = DARK_PLUS[type]
     if (c) return c
   }
   return PLAIN
@@ -53,7 +64,7 @@ function colourOf(types: string[]) {
 function walk(tokens: (string | PrismToken)[], types: string[], out: Tok[][]) {
   for (const tok of tokens) {
     if (typeof tok === 'string') {
-      const colour = colourOf(types)
+      const colour = colourOf(types, tok)
       tok.split('\n').forEach((part, i) => {
         if (i > 0) out.push([])
         if (part) out[out.length - 1]?.push({ t: part, c: colour })
@@ -61,7 +72,7 @@ function walk(tokens: (string | PrismToken)[], types: string[], out: Tok[][]) {
       continue
     }
     const aliases = tok.alias === undefined ? [] : Array.isArray(tok.alias) ? tok.alias : [tok.alias]
-    const inner = [...types, tok.type, ...aliases]
+    const inner = [...types, ...aliases, tok.type]
     walk(typeof tok.content === 'string' ? [tok.content] : Array.isArray(tok.content) ? tok.content : [tok.content], inner, out)
   }
 }
