@@ -53,20 +53,31 @@ const setup = async ($: Parameters<Parameters<typeof test>[1]>[0], on: Parameter
   await $.agent.spawn({ prompt: 'y', description: 'Second agent' })
 }
 
-test('each running agent gets its own sprite animation', async ($, on) => {
+test('each agent in a run is a different animated character', async ($, on) => {
   await setup($, on)
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
-  const alts = (await ui.findAll({ type: 'Svg' })).map(s => (s.props as { alt?: string }).alt)
-  expect(alts).toContain('agent avatar, bob animation')
-  expect(alts).toContain('agent avatar, wave animation')
+  const avatars = (await ui.findAll({ type: 'Svg' })).filter(s => String((s.props as { alt?: string }).alt).startsWith('agent avatar'))
+  expect(avatars.map(s => (s.props as { alt?: string }).alt)).toEqual(['agent avatar, digger', 'agent avatar, cowboy'])
+  expect(avatars.every(s => (s.props as { isInteractive?: boolean }).isInteractive === true)).toBe(true)
+  expect(String((avatars[0]?.props as { source?: string }).source)).toContain('animateTransform')
   await ui.unmount()
 })
 
-test('the animation option sets one style for every sprite', { options: { animation: 'hop' } }, async ($, on) => {
+test('the character option dresses every sprite the same', { options: { character: 'police' } }, async ($, on) => {
   await setup($, on)
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
   const alts = (await ui.findAll({ type: 'Svg' })).map(s => (s.props as { alt?: string }).alt)
-  expect(alts.filter(a => a === 'agent avatar, hop animation')).toHaveLength(2)
-  expect(alts).not.toContain('agent avatar, bob animation')
+  expect(alts.filter(a => a === 'agent avatar, police')).toHaveLength(2)
+  await ui.unmount()
+})
+
+test('a commit by an agent pops the commit stamp on its sprite', async ($, on) => {
+  on('tool.call', () => ({ result: 'ok' }))
+  await setup($, on)
+  await $.tool.call({ tool: 'Bash', command: 'git add -A && git commit -m "wip"', agentId: 'a1' })
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const alts = (await ui.findAll({ type: 'Svg' })).map(s => (s.props as { alt?: string }).alt)
+  expect(alts).toContain('agent avatar, digger, committed')
+  expect(alts).toContain('agent avatar, cowboy')
   await ui.unmount()
 })

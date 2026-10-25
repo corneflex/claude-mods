@@ -82,20 +82,36 @@ In testing, tokens, tool counts and durations matched Claude Code's own completi
 
 ### Sprites
 
-Each running agent's critter moves, and in the same run every agent gets a different animation: bob, wave,
-hop, blink, hat tip, wiggle or walk. When the agent finishes, its critter stops.
+![The seven characters, plus the commit and push stamps](docs/screenshots/agents-panel-characters.png)
+
+*One frame of each character, rendered from the mod's own SVGs.*
+
+Each agent in a run is a different character, and each one moves while its agent works:
+
+| Character | Look | Motion |
+|---|---|---|
+| digger | miner's helmet with a lamp | lamp beam flickers, pickaxe swings, dirt flies |
+| cowboy | wide-brim hat | lasso spins overhead, rides at a bounce, waves |
+| police | cap and gold badge | red/blue siren flashes and glows, arm directs traffic |
+| nurse | white cap with a red cross | sways while hearts float up and fade |
+| biker | helmet and visor | leans on spinning wheels, speed lines stream past |
+| worker | hard hat and hi-vis vest | jackhammer shakes the whole sprite, dust puffs |
+| astronaut | helmet bubble and antenna | floats and tilts, antenna blinks, stars twinkle |
+
+**Commit and push.** When an agent runs `git commit`, a green ✓ stamp pops above its sprite and confetti
+falls. When it runs `git push`, an arrow rockets up. Each plays three times and then fades out.
+
+When an agent finishes, its character stands still.
 
 To customize them, use the plugin's settings: `/config` in a terminal, or `pluginConfigs` in
 `~/.claude/settings.json`:
 
 | Option | Default | What it does |
 |---|---|---|
-| `animation` | `mixed` | `mixed` gives each agent its own animation. `bob`, `wave`, `hop`, `blink`, `hat`, `wiggle` or `walk` uses one style for all, and `off` keeps them still. |
-| `bodyColor` | `#E07F63` | The critters' body colour (hex). |
-| `hatColors` | six colours | Comma-separated hex colours, used in turn for each agent. |
-| `animateFinished` | `false` | Keeps sprites moving after their agent finishes. |
-
-A colour that isn't a hex value is ignored, and the default is used instead.
+| `character` | `mixed` | `mixed` gives each agent in a run a different character; name one to dress every sprite the same. |
+| `motion` | `true` | Animates the characters. The commit and push stamps play either way. |
+| `bodyColor` | `#E07F63` | The critters' body colour (hex). A value that isn't hex is ignored. |
+| `animateFinished` | `false` | Keeps characters moving after their agent finishes. |
 
 ### Surfaces
 

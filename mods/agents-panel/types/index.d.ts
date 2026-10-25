@@ -15,6 +15,7 @@ export type AgentRow = {
   contextTokens: number
   cost: number
   avatar: number
+  event?: { kind: 'commit' | 'push'; at: number }
 }
 
 export type RunRow = { id: string; title: string; startedAt: number }

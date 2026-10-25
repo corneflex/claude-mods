@@ -29,7 +29,6 @@ const TAGS: Record<string, { word: string; color: string }> = {
 }
 const PLAIN_TAG = { word: 'default', color: '#9A9A9A' }
 
-const HATS = ['#8A5A3C', '#B8B8C8', '#C8453A', '#E2B93B', '#7E5BC8', '#3FA7A0']
 const BODY = '#E07F63'
 
 // Module variables start over on a reload; everything drawn lives in $.state.
@@ -106,10 +105,10 @@ function money(n: number) {
   return `≈$${n < 10 ? n.toFixed(2) : n.toFixed(1)}`
 }
 
-const ANIMATIONS = ['bob', 'wave', 'hop', 'blink', 'hat', 'wiggle', 'walk'] as const
-type Animation = (typeof ANIMATIONS)[number]
+const CHARACTERS = ['digger', 'cowboy', 'police', 'nurse', 'biker', 'worker', 'astronaut'] as const
+type Character = (typeof CHARACTERS)[number]
 
-type Sprites = { animation: string; body: string; hats: string[]; animateFinished: boolean }
+type Sprites = { character: string; motion: boolean; body: string; animateFinished: boolean }
 
 // Colours come from user settings and go into SVG markup: accept hex only.
 function hexOr(value: unknown, fallback: string) {
@@ -117,68 +116,176 @@ function hexOr(value: unknown, fallback: string) {
 }
 
 function spritesFrom(options: Record<string, unknown>): Sprites {
-  const hats = typeof options.hatColors === 'string'
-    ? options.hatColors.split(',').map(c => hexOr(c, '')).filter(Boolean)
-    : []
   return {
-    animation: typeof options.animation === 'string' ? options.animation : 'mixed',
+    character: typeof options.character === 'string' ? options.character : 'mixed',
+    motion: options.motion !== false,
     body: hexOr(options.bodyColor, BODY),
-    hats: hats.length ? hats : HATS,
     animateFinished: options.animateFinished === true,
   }
 }
 
-function animationFor(index: number, sprites: Sprites): Animation | undefined {
-  if (sprites.animation === 'off') return undefined
-  const fixed = ANIMATIONS.find(a => a === sprites.animation)
-  return fixed ?? ANIMATIONS[index % ANIMATIONS.length]
+function characterFor(index: number, sprites: Sprites): Character {
+  return CHARACTERS.find(c => c === sprites.character) ?? CHARACTERS[index % CHARACTERS.length] ?? 'digger'
 }
 
-const loop = (attr: string, values: string, dur: number, extra = '') =>
-  `<animateTransform attributeName="transform" type="${attr}" values="${values}" dur="${dur}s" repeatCount="indefinite"${extra}/>`
+const rep = ' repeatCount="indefinite"'
+const spin = (values: string, dur: number, extra = '') =>
+  `<animateTransform attributeName="transform" type="rotate" values="${values}" dur="${dur}s"${rep}${extra}/>`
+const move = (values: string, dur: number, extra = '') =>
+  `<animateTransform attributeName="transform" type="translate" values="${values}" dur="${dur}s"${rep}${extra}/>`
+const fade = (values: string, dur: number, extra = '') =>
+  `<animate attributeName="opacity" values="${values}" dur="${dur}s"${rep}${extra}/>`
+const px = (x: number, y: number, fill: string, w = 1, h = 1) =>
+  `<rect x="${x}" y="${y}" width="${w + 0.02}" height="${h + 0.02}" fill="${fill}"/>`
 
-function avatarSvg(index: number, sprites: Sprites, animation?: Animation) {
-  const hat = sprites.hats[index % sprites.hats.length] ?? sprites.body
-  const caps = [
-    ['..HHHHHH..', '.HHHHHHHH.'],
-    ['...HHHH...', '.HHHHHHHH.'],
-    ['..HHHHHH..', 'HHHHHHHH..'],
-  ][Math.floor(index / sprites.hats.length) % 3] ?? []
-  const rows = [
-    ...caps,
-    '.BBBBBBBB.',
-    '.BEBBBBEB.',
-    'LBBBBBBBBR',
-    '.BBBBBBBB.',
-    '.F.F..G.G.',
-    '.F.F..G.G.',
-  ]
-  // Each letter is a layer the animations move on its own: H hat, E eyes, L/R arms, F/G legs.
-  const colour: Record<string, string> = { H: hat, E: '#2A1A14' }
+// Pixel rows: each letter is drawn in its colour; the layer letters move on their own.
+function pixels(rows: string[], x0: number, y0: number, colours: Record<string, string>) {
   const layers: Record<string, string> = {}
   rows.forEach((row, y) =>
     [...row].forEach((c, x) => {
-      if (c === '.') return
-      layers[c] = (layers[c] ?? '') + `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${colour[c] ?? sprites.body}"/>`
+      const fill = colours[c]
+      if (fill) layers[c] = (layers[c] ?? '') + px(x0 + x, y0 + y, fill)
     }),
   )
-  const anim: Partial<Record<string, string>> = {}
-  if (animation === 'bob') anim.all = loop('translate', '0 0;0 -0.7;0 0', 0.8)
-  if (animation === 'hop') anim.all = loop('translate', '0 0;0 -1.9;0 0;0 0', 1, ' keyTimes="0;0.3;0.6;1"')
-  if (animation === 'wiggle') anim.all = loop('rotate', '-9 5 4;9 5 4;-9 5 4', 0.7)
-  if (animation === 'wave') anim.R = loop('translate', '0 0;0 -2;0 -1;0 -2;0 0', 0.9)
-  if (animation === 'hat') anim.H = loop('rotate', '-14 5 2;14 5 2;-14 5 2', 0.9)
-  if (animation === 'walk') {
-    anim.F = loop('translate', '0 0;0 -0.8;0 0', 0.5)
-    anim.G = loop('translate', '0 0;0 -0.8;0 0', 0.5, ' begin="0.25s"')
-    anim.all = loop('translate', '0 0;0 -0.3;0 0', 0.25)
+  return layers
+}
+
+type Part = { hat: string[]; hatColours: Record<string, string>; vest?: string; props: string; body: string; arm: string }
+
+// Canvas is 16×14; the critter's head starts at (3, 6).
+function characterParts(c: Character, moving: boolean): Part {
+  const a = (s: string) => (moving ? s : '')
+  switch (c) {
+    case 'digger':
+      return {
+        hat: ['..YYYYYY..', '.YYYWYYYY.'],
+        hatColours: { Y: '#E8C547', W: '#FFF6C8' },
+        props:
+          // lamp beam, then a pickaxe swinging from the right hand, then dirt kicked up
+          `<polygon points="7.5,5.5 1,3 1,8" fill="#FFF6C8" opacity="0.35">${a(fade('0.15;0.45;0.15', 0.8))}</polygon>` +
+          `<g>${a(spin('10 13 9;-55 13 9;15 13 9;10 13 9', 0.8, ' keyTimes="0;0.45;0.6;1"'))}` +
+          `<rect x="12.6" y="3" width="0.8" height="6.5" fill="#8A5A3C"/><rect x="10.6" y="2.4" width="5" height="1.1" rx="0.5" fill="#9AA3AD"/></g>` +
+          a([0, 1, 2].map(i =>
+            `<rect x="14" y="12" width="0.7" height="0.7" fill="#7A4E2D" opacity="0">` +
+            `${move(`0 0;${0.6 + i * 0.7} ${-2 - i}`, 0.8, ` begin="${0.45 + i * 0.05}s"`)}${fade('0;1;0', 0.8, ` begin="${0.45 + i * 0.05}s"`)}</rect>`).join('')),
+        body: a(move('0 0;0 0.4;0 0', 0.8)),
+        arm: '',
+      }
+    case 'cowboy':
+      return {
+        hat: ['...HHHH...', '..HHHHHH..', 'HHHHHHHHHH'],
+        hatColours: { H: '#8A5A3C' },
+        props:
+          // lasso loop spinning over the head on a rope from the raised hand
+          `<line x1="13" y1="8" x2="13.5" y2="2.5" stroke="#C9A36B" stroke-width="0.4"/>` +
+          `<ellipse cx="13.5" cy="2" rx="2.4" ry="0.8" fill="none" stroke="#C9A36B" stroke-width="0.45">` +
+          `${a('<animate attributeName="rx" values="2.4;0.4;2.4" dur="0.6s" repeatCount="indefinite"/>')}</ellipse>`,
+        body: a(move('0 0;0 -0.8;0 0', 0.5) + spin('-3 8 10;3 8 10;-3 8 10', 1, ' additive="sum"')),
+        arm: a(move('0 0;0 -1.5;0 0', 0.6)),
+      }
+    case 'police':
+      return {
+        hat: ['..NNNNNN..', '.NNNYNNNN.', 'KKKKKKKKKK'],
+        hatColours: { N: '#2D3E7A', Y: '#E8C547', K: '#14182A' },
+        vest: '#2D3E7A',
+        props:
+          // siren flashing red/blue with a glow, a badge on the chest
+          `<circle cx="8" cy="2.6" r="2.2" fill="#E5534B" opacity="0.35">${a('<animate attributeName="fill" values="#E5534B;#4F86E0;#E5534B" dur="0.5s" repeatCount="indefinite"/>')}${a(fade('0.1;0.6;0.1', 0.25))}</circle>` +
+          `<rect x="7" y="2" width="2" height="1.4" rx="0.3" fill="#E5534B">${a('<animate attributeName="fill" values="#E5534B;#4F86E0;#E5534B" dur="0.5s" repeatCount="indefinite" calcMode="discrete"/>')}</rect>` +
+          px(9, 11, '#E8C547'),
+        body: '',
+        arm: a(move('0 0;0 -2;0 0;0 -2;0 0', 1)),
+      }
+    case 'nurse':
+      return {
+        hat: ['..WWRWWW..', '.WWRRRWWW.'],
+        hatColours: { W: '#F4F4F4', R: '#E5534B' },
+        props:
+          // hearts rising and beating beside the nurse
+          [0, 1].map(i =>
+            `<g opacity="0">${a(move(`0 0;${-0.5 + i} -6`, 2, ` begin="${i}s"`))}${a(fade('0;1;0', 2, ` begin="${i}s"`))}` +
+            `<path d="M1.5 12 l-1.2 -1.2 a0.7 0.7 0 0 1 1.2 -0.9 a0.7 0.7 0 0 1 1.2 0.9 z" fill="#F07178"/></g>`).join(''),
+        body: a(spin('-4 8 10;4 8 10;-4 8 10', 1.6)),
+        arm: '',
+      }
+    case 'biker':
+      return {
+        hat: ['.KKKKKKKK.', 'KKKKKKKKKK', '.CCCCCCCC.'],
+        hatColours: { K: '#1E1E24', C: '#4FC3E8' },
+        props:
+          // wheels with spinning spokes, speed lines streaming behind
+          [5, 12].map(cx =>
+            `<g transform="translate(${cx} 12.6)"><circle r="1.4" fill="none" stroke="#2A2A2A" stroke-width="0.6"/>` +
+            `<g>${a(spin('0;360', 0.4))}<path d="M-1.1 0H1.1M0 -1.1V1.1" stroke="#9AA3AD" stroke-width="0.25"/></g></g>`).join('') +
+          `<rect x="5" y="11.8" width="7" height="0.5" fill="#C8453A"/>` +
+          a([9.6, 11, 12.4].map((y, i) =>
+            `<rect x="0" y="${y - 3}" width="2" height="0.3" fill="#9AA3AD">${move('2 0;-2 0', 0.5, ` begin="${i * 0.15}s"`)}${fade('0;1;0', 0.5, ` begin="${i * 0.15}s"`)}</rect>`).join('')),
+        body: a(spin('-8 8 12;-5 8 12;-8 8 12', 0.4) + move('0 0;0 -0.3;0 0', 0.3, ' additive="sum"')),
+        arm: '',
+      }
+    case 'worker':
+      return {
+        hat: ['..OOOOOO..', 'OOOOOOOOOO'],
+        hatColours: { O: '#F08A24' },
+        vest: '#E8E04A',
+        props:
+          // jackhammer at the right hand, shaking, with dust puffs at its tip
+          `<g>${a(move('0 0;0.3 0.2;-0.2 -0.2;0.2 0.3;0 0', 0.15))}<rect x="13" y="7" width="1.6" height="1" fill="#555"/><rect x="13.5" y="8" width="0.7" height="4" fill="#9AA3AD"/></g>` +
+          a([0, 1].map(i =>
+            `<circle cx="13.8" cy="12.6" r="0.4" fill="#C9B79C" opacity="0"><animate attributeName="r" values="0.4;1.6" dur="0.7s" begin="${i * 0.35}s"${rep}/>${fade('0.8;0', 0.7, ` begin="${i * 0.35}s"`)}</circle>`).join('')),
+        body: a(move('0 0;0.2 0;-0.2 0.1;0 0', 0.15)),
+        arm: '',
+      }
+    case 'astronaut':
+      return {
+        hat: ['..AAAAAA..', '.AA....AA.'],
+        hatColours: { A: '#DDE3EA' },
+        vest: '#DDE3EA',
+        props:
+          // visor bubble, antenna light and twinkling stars
+          `<circle cx="8" cy="7.6" r="3.6" fill="#7FD1FF" fill-opacity="0.18" stroke="#DDE3EA" stroke-width="0.4"/>` +
+          `<rect x="7.8" y="2.6" width="0.4" height="2" fill="#DDE3EA"/><circle cx="8" cy="2.4" r="0.5" fill="#E5534B">${a(fade('1;0.2;1', 1))}</circle>` +
+          [[1, 2], [14, 4], [2, 10], [15, 11]].map(([x, y], i) =>
+            `<circle cx="${x}" cy="${y}" r="0.35" fill="#FFF6C8">${a(fade('0.2;1;0.2', 1.4, ` begin="${i * 0.35}s"`))}</circle>`).join(''),
+        body: a(move('0 0;0 -1.2;0 0', 2.4) + spin('-6 8 9;6 8 9;-6 8 9', 3.2, ' additive="sum"')),
+        arm: a(move('0 0;0 -1;0 0', 2.4)),
+      }
   }
-  const blink = animation === 'blink'
-    ? '<animate attributeName="opacity" values="1;1;0;1" keyTimes="0;0.88;0.94;1" dur="2.4s" repeatCount="indefinite"/>'
-    : ''
-  const layer = (key: string, extra = '') => `<g>${layers[key] ?? ''}${anim[key] ?? ''}${extra}</g>`
-  const body = layer('B') + layer('H') + layer('E', blink) + layer('L') + layer('R') + layer('F') + layer('G')
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -2 12 10" shape-rendering="crispEdges"><g>${body}${anim.all ?? ''}</g></svg>`
+}
+
+// A commit pops a green stamp with confetti; a push launches an arrow. Each plays a few times, then hides.
+function eventSvg(kind: 'commit' | 'push') {
+  const once = ' repeatCount="3" fill="freeze"'
+  if (kind === 'commit') {
+    const confetti = ['#E5534B', '#4F86E0', '#E8C547', '#5BB37F', '#A87BF0'].map((c, i) =>
+      `<rect x="${2 + i * 2.8}" y="0" width="0.8" height="0.8" fill="${c}"><animateTransform attributeName="transform" type="translate" values="0 -1;${i % 2 ? 1 : -1} 13" dur="1.2s" begin="${i * 0.12}s"${once}/></rect>`).join('')
+    return `<g>${confetti}<g transform="translate(3 2.6)"><g><animateTransform attributeName="transform" type="scale" values="0;1.3;1;1" keyTimes="0;0.2;0.3;1" dur="1.6s"${once}/>` +
+      `<circle r="2.4" fill="#2EA043"/><path d="M-1.2 0.1l0.8 0.8 1.6-1.7" fill="none" stroke="#fff" stroke-width="0.6" stroke-linecap="round"/></g></g>` +
+      `<animate attributeName="opacity" values="1;1;0" keyTimes="0;0.9;1" dur="4.8s" fill="freeze"/></g>`
+  }
+  return `<g><g><animateTransform attributeName="transform" type="translate" values="0 6;0 -10" dur="1.2s"${once}/>` +
+    `<rect x="1.4" y="5" width="1.2" height="3" fill="#3FC1C9" opacity="0.5"/><path d="M2 1.5l2 2.5h-1.3v2h-1.4v-2H0z" fill="#3FC1C9"/></g>` +
+    `<animate attributeName="opacity" values="1;1;0" keyTimes="0;0.9;1" dur="3.6s" fill="freeze"/></g>`
+}
+
+function avatarSvg(index: number, sprites: Sprites, moving: boolean, event?: 'commit' | 'push') {
+  const c = characterFor(index, sprites)
+  const part = characterParts(c, moving && sprites.motion)
+  const dark = '#2A1A14'
+  const hatTop = 6 - part.hat.length
+  const hat = pixels(part.hat, 3, hatTop, part.hatColours)
+  const bodyRows = [
+    '.BBBBBBBB.',
+    '.BEBBBBEB.',
+    'LBVVVVVVBR',
+    '.BBBBBBBB.',
+    '.F.F..G.G.',
+  ]
+  const body = pixels(bodyRows, 3, 6, { B: sprites.body, E: dark, L: sprites.body, R: sprites.body, V: part.vest ?? sprites.body, F: sprites.body, G: sprites.body })
+  const figure =
+    `<g>${part.body}${body.B ?? ''}${body.V ?? ''}${body.E ?? ''}${body.L ?? ''}<g>${part.arm}${body.R ?? ''}</g>${body.F ?? ''}${body.G ?? ''}` +
+    `${Object.values(hat).join('')}</g>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 14" shape-rendering="crispEdges">${figure}${part.props}${event ? eventSvg(event) : ''}</svg>`
 }
 
 function barSvg(fraction: number, color: string) {
@@ -316,7 +423,15 @@ export const register: Register = (on, options) => {
     if (agentId === undefined) return next(e)
     await update($, agents, rows => rows.map(r => (r.id === agentId ? { ...r, toolsStarted: r.toolsStarted + 1 } : r)))
     const result = await next(e)
-    await update($, agents, rows => rows.map(r => (r.id === agentId ? { ...r, toolsDone: r.toolsDone + 1 } : r)))
+    const command = String(e.tool) === 'Bash' ? String((e as unknown as { command?: unknown }).command ?? '') : ''
+    const kind = /\bgit\b[^|;&]*\bpush\b/.test(command) ? 'push' : /\bgit\b[^|;&]*\bcommit\b/.test(command) ? 'commit' : undefined
+    const ok = !('deny' in result && result.deny) && !('isError' in result && result.isError)
+    const at = kind && ok ? await $.clock.now() : 0
+    await update($, agents, rows =>
+      rows.map(r =>
+        r.id !== agentId ? r : { ...r, toolsDone: r.toolsDone + 1, ...(kind && ok ? { event: { kind, at } } : {}) },
+      ),
+    )
     return result
   }).catch(($, e, next) => next(e))
 
@@ -391,19 +506,21 @@ export const register: Register = (on, options) => {
             {Svg ? (
               (() => {
                 const moving = a.status === 'running' || sprites.animateFinished
-                const animation = moving ? animationFor(a.avatar, sprites) : undefined
+                const fresh = a.event && now - a.event.at < 8000 ? a.event.kind : undefined
+                const character = characterFor(a.avatar, sprites)
+                const label = fresh === 'commit' ? ', committed' : fresh === 'push' ? ', pushed' : ''
                 return (
                   <Svg
-                    source={avatarSvg(a.avatar, sprites, animation)}
-                    alt={animation ? `agent avatar, ${animation} animation` : 'agent avatar'}
-                    width={34}
-                    height={28}
-                    isInteractive={animation ? true : undefined}
+                    source={avatarSvg(a.avatar, sprites, moving, fresh)}
+                    alt={`agent avatar, ${character}${label}`}
+                    width={44}
+                    height={38}
+                    isInteractive={(moving && sprites.motion) || fresh ? true : undefined}
                   />
                 )
               })()
             ) : (
-              <Text color={sprites.hats[a.avatar % sprites.hats.length]}>▟▙</Text>
+              <Text color={sprites.body}>▟▙</Text>
             )}
             <Box flexDirection="column" flexGrow={1} flexShrink={1}>
               <Box flexDirection="row" justifyContent="space-between">
