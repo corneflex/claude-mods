@@ -98,6 +98,26 @@ Each agent in a run is a different character, and each one moves while its agent
 | worker | hard hat and hi-vis vest | jackhammer shakes the whole sprite, dust puffs |
 | astronaut | helmet bubble and antenna | floats and tilts, antenna blinks, stars twinkle |
 
+On top of its own move, every character performs two tricks in a 6-second loop:
+
+| Character | Tricks |
+|---|---|
+| digger | jump, then dance |
+| cowboy | backflip, then jump |
+| police | dance, then spin |
+| nurse | spin, then jump |
+| biker | wheelie, then jump |
+| worker | shake, then jump |
+| astronaut | spin, then backflip |
+
+They also blink and breathe, out of step with each other, and a shadow at their feet shrinks while they're
+in the air. While an agent is waiting on the model, with no tool running, a thought bubble with bouncing
+dots floats beside it.
+
+![Mid-trick: jumping, backflipping, spinning, a wheelie and the thought bubbles](docs/screenshots/agents-panel-tricks.png)
+
+*One frame 1.5 seconds into the loop, rendered from the mod's own SVGs.*
+
 **Commit and push.** When an agent runs `git commit`, a green ✓ stamp pops above its sprite and confetti
 falls. When it runs `git push`, an arrow rockets up. Each plays three times and then fades out.
 

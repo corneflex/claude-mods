@@ -268,9 +268,52 @@ function eventSvg(kind: 'commit' | 'push') {
     `<animate attributeName="opacity" values="1;1;0" keyTimes="0;0.9;1" dur="3.6s" fill="freeze"/></g>`
 }
 
-function avatarSvg(index: number, sprites: Sprites, moving: boolean, event?: 'commit' | 'push') {
+// Tricks play in two one-second windows of a 6 s loop, on top of each character's own move.
+const TRICK_LOOP = 6
+const TRICK_WINDOWS = [[1, 2], [4, 5]] as const
+type Trick = 'jump' | 'spin' | 'backflip' | 'dance' | 'wheelie' | 'shake'
+const TRICKS: Record<Character, [Trick, Trick]> = {
+  digger: ['jump', 'dance'],
+  cowboy: ['backflip', 'jump'],
+  police: ['dance', 'spin'],
+  nurse: ['spin', 'jump'],
+  biker: ['wheelie', 'jump'],
+  worker: ['shake', 'jump'],
+  astronaut: ['spin', 'backflip'],
+}
+
+// One animateTransform that rests at `rest` outside its window and plays `values` inside it.
+function inWindow(type: string, rest: string, values: string[], [from, to]: readonly [number, number]) {
+  const a = from / TRICK_LOOP
+  const b = to / TRICK_LOOP
+  const steps = values.map((_, i) => (a + ((b - a) * (i + 1)) / (values.length + 1)).toFixed(3))
+  const keyTimes = ['0', a.toFixed(3), ...steps, b.toFixed(3), '1'].join(';')
+  const all = [rest, rest, ...values, rest, rest].join(';')
+  return `<animateTransform attributeName="transform" type="${type}" values="${all}" keyTimes="${keyTimes}" dur="${TRICK_LOOP}s" repeatCount="indefinite" additive="sum"/>`
+}
+
+function trickSvg(trick: Trick, w: readonly [number, number]) {
+  switch (trick) {
+    case 'jump':
+      return inWindow('translate', '0 0', ['0 -2.2', '0 -3.2', '0 -2.2', '0 0.3'], w)
+    case 'spin':
+      return inWindow('rotate', '0 8 9', ['90 8 9', '180 8 9', '270 8 9', '360 8 9'], w)
+    case 'backflip':
+      return inWindow('translate', '0 0', ['0 -2.5', '0 -3.5', '0 -2.5', '0 0'], w) +
+        inWindow('rotate', '0 8 9', ['-90 8 9', '-180 8 9', '-270 8 9', '-360 8 9'], w)
+    case 'dance':
+      return inWindow('translate', '0 0', ['-1.2 0', '0 -0.8', '1.2 0', '0 -0.8', '-1.2 0', '0 0'], w)
+    case 'wheelie':
+      return inWindow('rotate', '0 5 12.6', ['-12 5 12.6', '-24 5 12.6', '-24 5 12.6', '-10 5 12.6'], w)
+    case 'shake':
+      return inWindow('rotate', '0 8 9', ['-12 8 9', '12 8 9', '-12 8 9', '12 8 9', '-6 8 9'], w)
+  }
+}
+
+function avatarSvg(index: number, sprites: Sprites, moving: boolean, event?: 'commit' | 'push', thinking = false) {
   const c = characterFor(index, sprites)
-  const part = characterParts(c, moving && sprites.motion)
+  const live = moving && sprites.motion
+  const part = characterParts(c, live)
   const dark = '#2A1A14'
   const hatTop = 6 - part.hat.length
   const hat = pixels(part.hat, 3, hatTop, part.hatColours)
@@ -282,10 +325,36 @@ function avatarSvg(index: number, sprites: Sprites, moving: boolean, event?: 'co
     '.F.F..G.G.',
   ]
   const body = pixels(bodyRows, 3, 6, { B: sprites.body, E: dark, L: sprites.body, R: sprites.body, V: part.vest ?? sprites.body, F: sprites.body, G: sprites.body })
+  // Blink and breathe on every character; offsets keep a run's agents out of step with each other.
+  const blink = live
+    ? `<animate attributeName="opacity" values="1;1;0;1;1;0;1" keyTimes="0;0.6;0.63;0.66;0.85;0.88;1" dur="${3.2 + (index % 3) * 0.5}s"${rep}/>`
+    : ''
+  const breathe = live ? move('0 0;0 0.35;0 0', 1.6, ` begin="${(index % 4) * 0.3}s"`) : ''
   const figure =
-    `<g>${part.body}${body.B ?? ''}${body.V ?? ''}${body.E ?? ''}${body.L ?? ''}<g>${part.arm}${body.R ?? ''}</g>${body.F ?? ''}${body.G ?? ''}` +
-    `${Object.values(hat).join('')}</g>`
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 14" shape-rendering="crispEdges">${figure}${part.props}${event ? eventSvg(event) : ''}</svg>`
+    `<g>${breathe}<g>${part.body}${body.B ?? ''}${body.V ?? ''}<g>${body.E ?? ''}${blink}</g>${body.L ?? ''}` +
+    `<g>${part.arm}${body.R ?? ''}</g>${body.F ?? ''}${body.G ?? ''}${Object.values(hat).join('')}</g></g>`
+  const [first, second] = TRICKS[c]
+  const tricks = live ? trickSvg(first, TRICK_WINDOWS[0]) + trickSvg(second, TRICK_WINDOWS[1]) : ''
+  const airborne = (t: Trick) => t === 'jump' || t === 'backflip'
+  const shadowShrink = live
+    ? TRICK_WINDOWS.map((w, i) => {
+        const t = i === 0 ? first : second
+        if (!airborne(t)) return ''
+        const a = (w[0] / TRICK_LOOP).toFixed(3)
+        const m = (((w[0] + w[1]) / 2) / TRICK_LOOP).toFixed(3)
+        const b = (w[1] / TRICK_LOOP).toFixed(3)
+        return `<animate attributeName="rx" values="3;3;1.6;3;3" keyTimes="0;${a};${m};${b};1" dur="${TRICK_LOOP}s"${rep}/>`
+      }).join('')
+    : ''
+  const shadow = `<ellipse cx="8" cy="13.6" rx="3" ry="0.5" fill="#000" opacity="0.35">${shadowShrink}</ellipse>`
+  const bubble = thinking && sprites.motion
+    ? `<g><path d="M13 -2.2h4.4a1.2 1.2 0 0 1 1.2 1.2v1.6a1.2 1.2 0 0 1-1.2 1.2h-2.6l-1.2 1v-1h-0.6a1.2 1.2 0 0 1-1.2-1.2v-1.6a1.2 1.2 0 0 1 1.2-1.2z" fill="#F4F4F4"/>` +
+      [0, 1, 2].map(i =>
+        `<circle cx="${13.6 + i * 1.5}" cy="-0.6" r="0.45" fill="#555">${move('0 0;0 -0.6;0 0', 0.9, ` begin="${i * 0.2}s"`)}</circle>`).join('') +
+      `</g>`
+    : ''
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -4 21 19" shape-rendering="crispEdges">${shadow}` +
+    `<g>${tricks}${figure}${part.props}</g>${bubble}${event ? eventSvg(event) : ''}</svg>`
 }
 
 function barSvg(fraction: number, color: string) {
@@ -509,12 +578,13 @@ export const register: Register = (on, options) => {
                 const fresh = a.event && now - a.event.at < 8000 ? a.event.kind : undefined
                 const character = characterFor(a.avatar, sprites)
                 const label = fresh === 'commit' ? ', committed' : fresh === 'push' ? ', pushed' : ''
+                const thinking = a.status === 'running' && a.toolsStarted === a.toolsDone
                 return (
                   <Svg
-                    source={avatarSvg(a.avatar, sprites, moving, fresh)}
-                    alt={`agent avatar, ${character}${label}`}
-                    width={44}
-                    height={38}
+                    source={avatarSvg(a.avatar, sprites, moving, fresh, thinking)}
+                    alt={`agent avatar, ${character}${label}${thinking ? ', thinking' : ''}`}
+                    width={48}
+                    height={44}
                     isInteractive={(moving && sprites.motion) || fresh ? true : undefined}
                   />
                 )
