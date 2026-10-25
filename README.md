@@ -144,10 +144,11 @@ bars, no animation).
 
 ## live-filetree
 
-![Files pane mockup](docs/screenshots/live-filetree.png)
+![live-filetree demo: idle, reading, editing, committing, then the diff](docs/screenshots/live-filetree-demo.gif)
 
-*Mockup drawn from the data recorded during a real live check (two reads, then a new file created and
-edited). In the app the highlighted name animates. A screenshot of the pane will replace it.*
+*A 10-second demo: Claude dozes, reads two files (purple shimmer), edits `client.js` (orange shimmer, then
+`+1 -1`), commits (✓ stamp and confetti), and a click opens the VS Code-style diff. Rebuilt from the mod's
+own code (its Claude scenes, Prism colours and row shimmer) and rendered frame by frame; not a screen recording.*
 
 A **Files** pane that opens beside the chat in the desktop app (`/live-files` opens it anywhere).
 
