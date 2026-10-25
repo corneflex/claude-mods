@@ -1,9 +1,10 @@
 {
   "name": "live-filetree",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "A Files pane that shows what Claude is reading, editing and creating right now, with git status, live highlights and click-to-diff.",
   "author": {
     "name": "corneflex"
   },
+  "license": "MIT",
   "types": "./types/index.d.ts"
 }

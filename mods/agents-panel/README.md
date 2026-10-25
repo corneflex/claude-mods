@@ -17,6 +17,7 @@ character.
 - [Limitations](#limitations)
 - [Development](#development)
 - [Version history](#version-history)
+- [License](#license)
 
 ## Installation
 
@@ -136,8 +137,13 @@ The mod also registers a read-only tool, `mcp__agents-panel__state`, that return
 
 | Version | Changes |
 |---|---|
+| 0.4.2 | MIT licence. |
 | 0.4.1 | Characters move only in straight lines: no spinning or flipping. |
 | 0.4.0 | Two tricks per character, blinking, breathing, shadows and the thinking bubble. |
 | 0.3.0 | Seven characters with props, and the commit and push stamps. |
 | 0.2.0 | Animated sprites and the first options. |
 | 0.1.0 | The Agents pane: runs, totals, rows and progress. |
+
+## License
+
+[MIT](LICENSE).

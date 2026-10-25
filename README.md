@@ -65,7 +65,9 @@ mods/<mod>/                       one folder per mod (its plugin root)
   types/index.d.ts                the mod's state contract
   tests/                          tests run with `claude plugin test`
   README.md                       the mod's documentation
+  LICENSE                         a copy of the MIT licence
 docs/screenshots/                 images used by the READMEs
+LICENSE                           MIT licence (each mod has a copy)
 ```
 
 ## Contributing
@@ -74,5 +76,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add a mod or change one.
 
 ## License
 
-No licence has been chosen for this repository yet, so all rights are reserved by its author. Bundled
-third-party code keeps its own licence; see each mod's README.
+[MIT](LICENSE). Each mod ships a copy of the licence in its folder. Bundled third-party code keeps its own
+licence, named in the mod's README.

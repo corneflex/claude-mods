@@ -9,7 +9,10 @@
    - `hooks/register.tsx`: the hooks module, exporting `register(on, options)`;
    - `types/index.d.ts`: the state contract, when the mod keeps values in `$.state`;
    - `tests/*.test.tsx`: tests for what the mod draws and records;
-   - `README.md`: the mod's documentation (see below).
+   - `README.md`: the mod's documentation (see below);
+   - `LICENSE`: a copy of the root MIT licence, since an install copies only the mod's folder.
+
+   Set `"license": "MIT"` in its `plugin.json`.
 2. Add the mod to `.claude-plugin/marketplace.json`:
 
    ```json

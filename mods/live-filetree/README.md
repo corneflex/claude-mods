@@ -17,6 +17,7 @@ click opens a VS Code-style diff, a code reader or a Markdown reader.
 - [Development](#development)
 - [Third-party code](#third-party-code)
 - [Version history](#version-history)
+- [License](#license)
 
 ## Installation
 
@@ -162,6 +163,7 @@ install npm packages, so Prism's core and the language grammars above are bundle
 
 | Version | Changes |
 |---|---|
+| 0.6.2 | MIT licence. |
 | 0.6.1 | Files keep their highlight for 8 seconds after Claude's last action on them. |
 | 0.6.0 | The animated Claude in the status card. |
 | 0.5.1 | VS Code colours for control flow and template interpolations. |
@@ -171,3 +173,7 @@ install npm packages, so Prism's core and the language grammars above are bundle
 | 0.3.0 | Text badges instead of coloured backgrounds. |
 | 0.2.0 | Flicker-free animated rows and the full-screen diff. |
 | 0.1.0 | The Files pane: status card, touched list, tree, git status and inline diffs. |
+
+## License
+
+[MIT](LICENSE). Prism, bundled in `hooks/vendor/`, is also MIT; see [Third-party code](#third-party-code).
