@@ -40,6 +40,7 @@ export type Preview = {
   from: 'touched' | 'tree' | 'search'
   mode: 'diff' | 'file' | 'note'
   text: string
+  split?: boolean
 }
 
 declare module 'claude-code' {

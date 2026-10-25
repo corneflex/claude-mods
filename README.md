@@ -178,17 +178,23 @@ Created or Committed.
 
 **Live highlight.** While Claude works on a file, its row in both lists lights up: purple for reading,
 orange for editing, green for creating.
-- A bright band sweeps across the file name and a glowing scan line runs beneath it.
-- Edited files get a blinking caret, and new files type themselves in.
-- A pulsing `reading` / `editing` / `creating` pill sits beside the name.
+- A bright band sweeps along the file name letter by letter.
+- A spinner turns beside the `reading` / `editing` / `creating` label.
 
-**Click to diff.** Click any file to open its `git diff` underneath, with added lines in green and removed lines
-in red. A new file shows as all-added lines, and a file with no changes shows its contents. Click it again
-or press *Close* to hide it.
+The rows animate inside the pane's own drawing, so the tree no longer flickers while it updates.
+
+**Diff screen.** Click any file to open a full-screen diff in the style of VS Code:
+- **Header:** a *← Files* button (or `b`) that returns to the tree, the file's badge, name, folder and
+  `+/-` counts.
+- **Body:** line numbers in the gutter, removed lines on red and added lines on green, and blue hunk headers.
+- **Layout:** *Side by side* (or `v`) puts HEAD on the left and the working tree on the right; *Inline*
+  shows one column. Side by side is the default when the pane is wide.
+- **Other files:** a new file shows as all-added lines, and a file with no changes opens in a
+  syntax-highlighted view.
 
 Git status refreshes every 5 seconds and after every edit, write or shell command. The mod also registers
-a read-only tool, `mcp__live-filetree__state`, which returns what the pane holds as JSON. The animations
-use SVG on the desktop app; the terminal shows the same information with coloured text. It has no
+a read-only tool, `mcp__live-filetree__state`, which returns what the pane holds as JSON. The row animations
+run in the desktop app and the terminal; VS Code shows the same rows without animation. It has no
 third-party dependencies.
 
 ---

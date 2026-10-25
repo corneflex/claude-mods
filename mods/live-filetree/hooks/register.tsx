@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, RenderChildren } from 'claude-code'
 
 import type { Activity, Entry, FileAction, GitFile, GitInfo, Preview, Touched, View } from '../types'
+import type { RowSpec, RowsProps, Seg } from './rows'
 
 const PANE = 'live-filetree'
 
@@ -156,48 +157,6 @@ function textWidth(s: string, px: number) {
 
 // The live name: a bright band sweeps across the letters, a scan line runs under them, and
 // edits get a blinking caret while new files type themselves in.
-function liveNameSvg(name: string, color: string, verb: Touched['verb']) {
-  const px = 15
-  const w = textWidth(name, px) + 14
-  const h = 24
-  const caret = verb === 'editing'
-    ? `<rect x="${w - 11}" y="5" width="2" height="15" rx="1" fill="${color}"><animate attributeName="opacity" values="1;0;1" dur="0.9s" repeatCount="indefinite"/></rect>`
-    : ''
-  const reveal = verb === 'creating'
-    ? `<clipPath id="r"><rect x="0" y="0" height="${h}" width="0"><animate attributeName="width" values="0;${w};${w}" keyTimes="0;0.7;1" dur="2s" repeatCount="indefinite"/></rect></clipPath>`
-    : ''
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-<defs>
-<linearGradient id="g" gradientUnits="userSpaceOnUse" x1="-70" y1="0" x2="0" y2="0">
-<stop offset="0" stop-color="${color}"/><stop offset="0.45" stop-color="#FFFFFF"/><stop offset="0.55" stop-color="#FFFFFF"/><stop offset="1" stop-color="${color}"/>
-<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="${w + 70} 0" dur="1.5s" repeatCount="indefinite"/>
-</linearGradient>
-<linearGradient id="u" x1="0" x2="1"><stop offset="0" stop-color="${color}" stop-opacity="0"/><stop offset="0.5" stop-color="${color}"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient>
-<filter id="glow" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-${reveal}
-</defs>
-<g${verb === 'creating' ? ' clip-path="url(#r)"' : ''}>
-<text x="0" y="17" font-family="${FONT}" font-size="${px}" font-weight="650" fill="url(#g)" filter="url(#glow)">${escapeXml(name)}</text>
-</g>
-<rect y="21" width="46" height="2" rx="1" fill="url(#u)"><animate attributeName="x" from="-46" to="${w}" dur="1.5s" repeatCount="indefinite"/></rect>
-${caret}
-</svg>`
-}
-
-function pillSvg(text: string, color: string, bg: string, isLive: boolean) {
-  const w = textWidth(text, 13) + 20
-  const pulse = isLive
-    ? `<animate attributeName="opacity" values="1;0.45;1" dur="1.2s" repeatCount="indefinite"/>`
-    : ''
-  const dot = isLive
-    ? `<circle cx="9" cy="11" r="3" fill="${color}"><animate attributeName="r" values="2;3.5;2" dur="1.2s" repeatCount="indefinite"/></circle>`
-    : ''
-  const x = isLive ? 16 : 10
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w + (isLive ? 8 : 0)}" height="22" viewBox="0 0 ${w + (isLive ? 8 : 0)} 22">
-<rect width="${w + (isLive ? 8 : 0)}" height="22" rx="11" fill="${bg}">${pulse}</rect>${dot}
-<text x="${x}" y="15.5" font-family="${FONT}" font-size="13" font-weight="650" fill="${color}">${escapeXml(text)}</text></svg>`
-}
-
 function iconSvg(kind: 'thinking' | 'reading' | 'editing' | 'creating' | 'committed' | 'idle' | 'answered') {
   const map = {
     thinking: ['#2C2C2C', '#D8D8D8'],
@@ -224,14 +183,77 @@ function iconSvg(kind: 'thinking' | 'reading' | 'editing' | 'creating' | 'commit
   return `<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="${bg}"/>${ring}${glyphs[kind]}</svg>`
 }
 
-const BRANCH_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="${C.folder}" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="4" r="2"/><circle cx="5" cy="16" r="2"/><circle cx="15" cy="6" r="2"/><path d="M5 6v8M15 8c0 4-6 3-9.5 6.5"/></svg>`
+// Shimmer palettes, darkest to brightest, and the tint behind a row Claude is working on.
+const PALETTES: Record<string, string[]> = {
+  reading: ['#7A5CB0', '#A87BF0', '#CDB4FF', '#FFFFFF'],
+  editing: ['#B0602A', '#F0883E', '#FFC08A', '#FFFFFF'],
+  creating: ['#2E8A5C', '#4CC38A', '#9BE8C2', '#FFFFFF'],
+}
+const VERB_COLOUR: Record<string, string> = { reading: '#A87BF0', editing: '#F0883E', creating: '#4CC38A' }
+const VERB_BG: Record<string, string> = { reading: '#2A2140', editing: '#36261A', creating: '#1B3328' }
 
-function folderSvg(color: string, isOpen: boolean) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="18" viewBox="0 0 20 18"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3H8l2 2h6.5A1.5 1.5 0 0 1 18 6.5v8a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 2 14.5z" fill="${isOpen ? `${color}33` : 'none'}" stroke="${color}" stroke-width="1.6" stroke-linejoin="round"/></svg>`
+// VS Code dark diff colours.
+const DIFF = {
+  editorBg: '#1E1E1E',
+  barBg: '#252526',
+  tabBg: '#2D2D2D',
+  gutter: '#6E7681',
+  text: '#D4D4D4',
+  delBg: '#4B1E1E',
+  addBg: '#1F3A26',
+  empty: '#252526',
+  hunkBg: '#1E2A3A',
+  hunk: '#79B8FF',
 }
 
-function dotSvg(color: string) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="${color}"/></svg>`
+type DiffLine = { kind: 'ctx' | 'del' | 'add' | 'hunk'; text: string; old?: number; new?: number }
+
+function parseDiff(text: string): DiffLine[] {
+  const out: DiffLine[] = []
+  let oldNo = 0
+  let newNo = 0
+  let inHunk = false
+  for (const raw of text.split('\n')) {
+    const h = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)$/.exec(raw)
+    if (h) {
+      oldNo = Number(h[1])
+      newNo = Number(h[2])
+      inHunk = true
+      out.push({ kind: 'hunk', text: raw })
+    } else if (!inHunk || raw.startsWith('\\')) {
+      continue
+    } else if (raw.startsWith('-')) {
+      out.push({ kind: 'del', text: raw.slice(1), old: oldNo++ })
+    } else if (raw.startsWith('+')) {
+      out.push({ kind: 'add', text: raw.slice(1), new: newNo++ })
+    } else {
+      out.push({ kind: 'ctx', text: raw.slice(1), old: oldNo++, new: newNo++ })
+    }
+  }
+  return out
+}
+
+// Side by side: context on both sides; a run of removals faces the run of additions that follows it.
+function pairLines(lines: DiffLine[]) {
+  const out: { l?: DiffLine; r?: DiffLine; hunk?: string }[] = []
+  let i = 0
+  while (i < lines.length) {
+    const l = lines[i] as DiffLine
+    if (l.kind === 'hunk') {
+      out.push({ hunk: l.text })
+      i++
+    } else if (l.kind === 'ctx') {
+      out.push({ l, r: l })
+      i++
+    } else {
+      const dels: DiffLine[] = []
+      const adds: DiffLine[] = []
+      while (lines[i]?.kind === 'del') dels.push(lines[i++] as DiffLine)
+      while (lines[i]?.kind === 'add') adds.push(lines[i++] as DiffLine)
+      for (let k = 0; k < Math.max(dels.length, adds.length); k++) out.push({ l: dels[k], r: adds[k] })
+    }
+  }
+  return out
 }
 
 async function run($: EngineInterface, argv: string[], cwd: string) {
@@ -328,7 +350,19 @@ async function loadDir($: EngineInterface, dir: string) {
       .map(e => ({ name: e.name, isDir: e.kind === 'dir', size: e.size, mtimeMs: e.mtimeMs }))
       .sort((a, b) => (a.isDir === b.isDir ? a.name.localeCompare(b.name) : a.isDir ? -1 : 1))
   } catch {}
+  const known = (await read($, dirs))[dir]
+  if (known && JSON.stringify(known) === JSON.stringify(entries)) return
   await update($, dirs, all => ({ ...all, [dir]: entries }))
+}
+
+async function toggleDir($: EngineInterface, path: string) {
+  const v = await read($, view)
+  const isOpen = v.expanded.includes(path)
+  await update($, view, cur => ({
+    ...cur,
+    expanded: isOpen ? cur.expanded.filter(d => d !== path) : [...cur.expanded, path],
+  }))
+  if (!isOpen) await loadDir($, path)
 }
 
 async function reloadOpenDirs($: EngineInterface) {
@@ -373,11 +407,6 @@ async function markEnd($: EngineInterface, path: string, action: FileAction, ok:
 }
 
 async function loadPreview($: EngineInterface, path: string, from: Preview['from']) {
-  const current = await read($, preview)
-  if (current?.path === path && current.from === from) {
-    await update($, preview, () => null)
-    return
-  }
   const g = await read($, git)
   const cwd = await read($, project)
   let result: Preview = { path, from, mode: 'note', text: 'Nothing to show.' }
@@ -390,7 +419,7 @@ async function loadPreview($: EngineInterface, path: string, from: Preview['from
     result = text.includes('Binary files')
       ? { path, from, mode: 'note', text: 'Binary file changed.' }
       : text
-        ? { path, from, mode: 'diff', text: text.split('\n').slice(0, 600).join('\n') }
+        ? { path, from, mode: 'diff', text: text.split('\n').slice(0, 1500).join('\n') }
         : result
   } else {
     try {
@@ -470,7 +499,6 @@ export const register: Register = on => {
     if (e.agentId === undefined) {
       await update($, activity, (): Activity => ({ phase: 'thinking' }))
       await update($, touched, list => list.filter(t => t.active > 0))
-      await update($, preview, () => null)
     }
     return next(e)
   })
@@ -545,9 +573,20 @@ export const register: Register = on => {
     return next(e)
   }).catch(($, e, next) => next(e))
 
+  on('ui.message', async ($, e, next) => {
+    if (e.requestId !== PANE || !['touched', 'tree', 'search'].includes(e.element)) return next(e)
+    const press = (e.data as { press?: unknown } | null)?.press
+    if (typeof press !== 'string' || press.length < 3) return {}
+    const path = press.slice(2)
+    if (press.startsWith('d:')) await toggleDir($, path)
+    else await loadPreview($, path, e.element as Preview['from'])
+    return {}
+  })
+
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const ui = $.ui.resolve(e)
     const { Box, Text, Button, Code } = ui
+    const Client = e.surface === 'desktop' || e.surface === 'terminal' ? $.ui.resolve(e).Client : undefined
     const Svg = e.surface === 'terminal' ? undefined : $.ui.resolve(e).Svg
     const Input = e.surface === 'mobile' ? undefined : $.ui.resolve(e).Input
     const cwd = await read($, project)
@@ -649,7 +688,7 @@ export const register: Register = on => {
 
     const legend = (color: string, text: string) => (
       <Box flexDirection="row" gap={1} alignItems="center">
-        {Svg ? svg(dotSvg(color), '') : <Text color={color}>●</Text>}
+        <Text color={color}>●</Text>
         <Text dimColor>{text}</Text>
       </Box>
     )
@@ -666,7 +705,7 @@ export const register: Register = on => {
         </Box>
         <Box flexDirection="row" justifyContent="space-between" alignItems="center" borderStyle="single" borderColor={C.border} paddingTop={1}>
           <Box flexDirection="row" gap={1} alignItems="center">
-            {Svg ? svg(BRANCH_SVG, 'branch') : <Text color={C.folder}>⎇</Text>}
+            <Text color={C.folder} bold>⎇</Text>
             <Text bold weight="bold">{g.isRepo ? g.branch : basename(cwd)}</Text>
             {g.ahead > 0 && <Text color={C.ahead} bold>{`↑${g.ahead}`}</Text>}
           </Box>
@@ -680,56 +719,127 @@ export const register: Register = on => {
       </Box>
     )
 
-    // --- Shared pieces ----------------------------------------------------------------------
-    const badge = (name: string) => {
-      const [txt, fg, bg] = badgeOf(name)
-      return <Text color={fg} backgroundColor={bg} bold>{` ${txt} `}</Text>
-    }
-
-    const pill = (t: Touched | undefined) => {
-      if (!t) return null
-      if (t.active > 0 && t.verb) {
-        const color = t.verb === 'reading' ? C.read : t.verb === 'editing' ? C.edit : C.create
-        const bg = t.verb === 'reading' ? C.readBg : t.verb === 'editing' ? C.editBg : C.createBg
-        return Svg ? svg(pillSvg(t.verb, color, bg, true), t.verb, true) : <Text color={color}>{` ${t.verb}… `}</Text>
-      }
-      const [txt, fg, bg] = PILLS[t.action]
-      return Svg ? svg(pillSvg(txt, fg, bg, false), txt) : <Text color={fg} backgroundColor={bg}>{` ${txt} `}</Text>
-    }
-
-    const name = (path: string, from: Preview['from'], t: Touched | undefined, color?: string) => {
+    // --- Rows for the animated Client (touched list, search results, tree) -----------------
+    const rowFor = (path: string, opts: { indent?: number; dir?: boolean }): RowSpec => {
+      const t = activeByPath.get(path)
+      const done = touchedByPath.get(path)
+      const c = g.changed[path]
       const n = basename(path)
-      if (t && t.active > 0 && t.verb && Svg) {
-        const c = t.verb === 'reading' ? C.read : t.verb === 'editing' ? C.edit : C.create
-        return svg(liveNameSvg(n, c, t.verb), `${t.verb} ${n}`, true)
+      const [badgeTxt, badgeFg, badgeBg] = badgeOf(n)
+      const left: Seg[] = [{ t: '  '.repeat(opts.indent ?? 0) }, { t: ` ${badgeTxt} `, c: badgeFg, bg: badgeBg, b: true }, { t: ' ' }]
+      if (t?.verb) left.push({ t: n, sh: t.verb, b: true })
+      else left.push({ t: n, b: true, c: c ? C.uncommitted : done?.action === 'read' ? C.read : undefined })
+      if (opts.dir) left.push({ t: `  ${relative(cwd, dirname(path)) || '.'}`, dim: true })
+      const right: Seg[] = []
+      if (t?.verb) {
+        right.push({ t: ` ${t.verb} `, c: VERB_COLOUR[t.verb], spin: true, b: true })
+      } else {
+        if (c && done?.action !== 'commit' && (c.adds || c.dels)) {
+          if (!done) right.push({ t: `${c.code} `, c: C.uncommitted, b: true })
+          right.push({ t: `+${c.adds}`, c: C.add }, { t: ` -${c.dels} `, c: C.del })
+        }
+        if (done) {
+          const [txt, fg, bg] = PILLS[done.action]
+          right.push({ t: ` ${txt} `, c: fg, bg, b: true })
+        } else if (!c && opts.indent !== undefined) {
+          const entry = listing[dirname(path)]?.find(x => x.name === n)
+          if (entry) right.push({ t: v.showSizes ? sizeText(entry.size) : dateText(entry.mtimeMs), dim: true })
+        }
       }
+      return { id: `f:${path}`, left, right, bg: t?.verb ? VERB_BG[t.verb] : undefined }
+    }
+
+    // Rows animate inside a Client, so a shimmer never redraws the pane. Surfaces without Client get them still.
+    const rowsClient = (key: 'touched' | 'tree' | 'search', rows: RowSpec[], empty: string) => {
+      // Client props must be plain data: the JSON round trip drops the fields left undefined.
+      const props: RowsProps = JSON.parse(JSON.stringify({ rows, hoverBg: '#2A2D2E', palettes: PALETTES, empty }))
+      if (Client) return <Client key={key} module="./rows.tsx" props={props} />
+      if (rows.length === 0) return <Text dimColor>{empty}</Text>
+      const seg = (x: Seg) => <Text color={x.sh ? VERB_COLOUR[x.sh] : x.c} backgroundColor={x.bg} bold={x.b} dimColor={x.dim}>{x.t}</Text>
       return (
-        <Button key={`${from}:${path}`} plain onPress={() => void loadPreview($, path, from)}>
-          <Text bold color={color}>{n}</Text>
-        </Button>
+        <Box flexDirection="column">
+          {rows.map((r, i) => {
+            const path = r.id.slice(2)
+            const open = r.id.startsWith('d:') ? () => void toggleDir($, path) : () => void loadPreview($, path, key)
+            return (
+              <Box key={`${key}${i}`} flexDirection="row" backgroundColor={r.bg}>
+                {r.id ? <Button key={`${key}:${r.id}`} plain onPress={open}>{r.left.map(seg)}</Button> : <Text>{r.left.map(seg)}</Text>}
+                <Box flexGrow={1} />
+                <Text>{r.right.map(seg)}</Text>
+              </Box>
+            )
+          })}
+        </Box>
       )
     }
 
-    const rowBg = (t: Touched | undefined) =>
-      !t || !t.active || !Svg ? undefined : t.verb === 'reading' ? C.readBg : t.verb === 'editing' ? C.editBg : C.createBg
-
-    const previewBox = (path: string, from: Preview['from']) => {
-      if (!shown || shown.path !== path || shown.from !== from) return null
-      const c = g.changed[path]
-      return (
-        <Box flexDirection="column" borderStyle="round" borderColor={C.border} marginY="xs" key={`pv:${from}:${path}`}>
-          <Box flexDirection="row" justifyContent="space-between" paddingX={1}>
-            <Text dimColor size="caption">
-              {shown.mode === 'diff' ? `git diff · ${relative(cwd, path)}` : shown.mode === 'file' ? `${relative(cwd, path)} · no changes` : relative(cwd, path)}
-              {c ? ` · +${c.adds} -${c.dels}` : ''}
-            </Text>
-            <Button key={`close:${from}:${path}`} plain onPress={() => void update($, preview, () => null)}>
-              <Text dimColor>Close</Text>
-            </Button>
+    // --- Full-screen diff, VS Code style --------------------------------------------------
+    if (shown) {
+      const c = g.changed[shown.path]
+      const [badgeTxt, badgeFg, badgeBg] = badgeOf(shown.path)
+      const width = e.props.bodyColumns
+      const split = shown.split ?? width >= 110
+      const lines = shown.mode === 'diff' ? parseDiff(shown.text) : []
+      const num = (n?: number) => (n === undefined ? '' : String(n)).padStart(5) + ' '
+      const line = (key: string, l: DiffLine | undefined, side: 'old' | 'new' | 'both') => {
+        const bg = !l ? DIFF.empty : l.kind === 'del' ? DIFF.delBg : l.kind === 'add' ? DIFF.addBg : undefined
+        const mark = !l ? ' ' : l.kind === 'del' ? '-' : l.kind === 'add' ? '+' : ' '
+        const gutter = !l ? '' : side === 'both' ? `${num(l.old)}${num(l.new)}` : num(side === 'old' ? l.old : l.new)
+        return (
+          <Box key={key} flexDirection="row" height={1} overflow="hidden" backgroundColor={bg} flexGrow={1} width={side === 'both' ? undefined : '50%'}>
+            <Text color={DIFF.gutter}>{gutter.padEnd(side === 'both' ? 12 : 6)}</Text>
+            <Text color={l?.kind === 'del' ? C.del : l?.kind === 'add' ? C.add : DIFF.gutter}>{`${mark} `}</Text>
+            <Text color={DIFF.text} wrap="truncate-end">{l?.text ?? ''}</Text>
           </Box>
-          {shown.mode === 'note'
-            ? <Box paddingX={1}><Text dimColor>{shown.text}</Text></Box>
-            : <Code source={shown.text} format={shown.mode === 'diff' ? 'diff' : 'source'} path={shown.mode === 'file' ? path : undefined} wrap="truncate-end" />}
+        )
+      }
+      const hunk = (key: string, text: string) => (
+        <Box key={key} flexDirection="row" height={1} backgroundColor={DIFF.hunkBg} paddingX={1}>
+          <Text color={DIFF.hunk} wrap="truncate-end">{text}</Text>
+        </Box>
+      )
+      const body: RenderChildren[] = []
+      if (shown.mode === 'diff' && split) {
+        pairLines(lines).forEach((p, i) =>
+          body.push(
+            p.hunk !== undefined
+              ? hunk(`h${i}`, p.hunk)
+              : <Box key={`p${i}`} flexDirection="row">{line(`l${i}`, p.l, 'old')}{line(`r${i}`, p.r, 'new')}</Box>,
+          ),
+        )
+      } else if (shown.mode === 'diff') {
+        lines.forEach((l, i) => body.push(l.kind === 'hunk' ? hunk(`h${i}`, l.text) : line(`i${i}`, l, 'both')))
+      }
+      return (
+        <Box flexDirection="column">
+          <Box flexDirection="row" alignItems="center" gap={1} backgroundColor={DIFF.barBg} paddingX={1}>
+            <Button key="back" label="← Files" hotkey="b" onPress={() => void update($, preview, () => null)} />
+            <Text color={badgeFg} backgroundColor={badgeBg} bold>{` ${badgeTxt} `}</Text>
+            <Text bold>{basename(shown.path)}</Text>
+            <Text dimColor wrap="truncate-end">{relative(cwd, dirname(shown.path)) || '.'}</Text>
+            <Box flexGrow={1} />
+            {c ? <Text><Text color={C.add}>{`+${c.adds}`}</Text><Text color={C.del}>{` -${c.dels}`}</Text></Text> : null}
+            {shown.mode === 'diff' && (
+              <Button
+                key="layout"
+                label={split ? 'Inline' : 'Side by side'}
+                hotkey="v"
+                onPress={() => void update($, preview, p => (p ? { ...p, split: !split } : p))}
+              />
+            )}
+          </Box>
+          <Box flexDirection="row" backgroundColor={DIFF.tabBg} paddingX={1}>
+            <Text dimColor>
+              {shown.mode === 'diff'
+                ? split ? `${relative(cwd, shown.path)} (HEAD)  ↔  ${relative(cwd, shown.path)} (working tree)` : `git diff HEAD -- ${relative(cwd, shown.path)}`
+                : shown.mode === 'file' ? `${relative(cwd, shown.path)} · no changes` : relative(cwd, shown.path)}
+            </Text>
+          </Box>
+          <Box flexDirection="column" backgroundColor={DIFF.editorBg}>
+            {shown.mode === 'diff' ? body : null}
+            {shown.mode === 'file' ? <Code source={shown.text} path={shown.path} startLine={1} wrap="truncate-end" /> : null}
+            {shown.mode === 'note' ? <Box padding={1}><Text dimColor>{shown.text}</Text></Box> : null}
+          </Box>
         </Box>
       )
     }
@@ -789,152 +899,64 @@ export const register: Register = on => {
           <Text dimColor bold>CLAUDE TOUCHED</Text>
           <Text dimColor bold>{`${list.length} FILE${list.length === 1 ? '' : 'S'}`}</Text>
         </Box>
-        {list.length === 0 && <Box paddingLeft={2} paddingY="xs"><Text dimColor>Nothing yet</Text></Box>}
-        {list.map(t => {
-          const c = g.changed[t.path]
-          return (
-            <Box flexDirection="column" key={`t:${t.path}`}>
-              <Box flexDirection="row" justifyContent="space-between" alignItems="center" paddingLeft={1} paddingY="xs" backgroundColor={rowBg(t)}>
-                <Box flexDirection="row" gap={1} alignItems="center" flexShrink={1}>
-                  {badge(t.path)}
-                  {name(t.path, 'touched', t)}
-                  <Text dimColor wrap="truncate-end">{relative(cwd, dirname(t.path)) || '.'}</Text>
-                </Box>
-                <Box flexDirection="row" gap={1} alignItems="center">
-                  {c && t.action !== 'commit' && t.action !== 'read' && (c.adds || c.dels) ? (
-                    <Text><Text color={C.add}>{`+${c.adds}`}</Text><Text color={C.del}>{` -${c.dels}`}</Text></Text>
-                  ) : null}
-                  {pill(t)}
-                </Box>
-              </Box>
-              {previewBox(t.path, 'touched')}
-            </Box>
-          )
-        })}
+        {rowsClient('touched', list.map(t => rowFor(t.path, { dir: true })), '  Nothing yet')}
       </Box>
     )
 
-    // --- Search results ------------------------------------------------------------------------
+    // --- Search results or the tree ------------------------------------------------------------
     const q = v.query.trim().toLowerCase()
-    const results = q
-      ? allFiles.filter(p => relative(cwd, p).toLowerCase().includes(q)).slice(0, 60)
-      : []
-    const resultsView = q ? (
-      <Box flexDirection="column">
-        <Box flexDirection="row" justifyContent="space-between" paddingX={1}>
-          <Text dimColor bold>MATCHES</Text>
-          <Text dimColor bold>{results.length === 60 ? '60+' : String(results.length)}</Text>
+    let lower: RenderChildren
+    if (q) {
+      const results = allFiles.filter(p => relative(cwd, p).toLowerCase().includes(q)).slice(0, 60)
+      lower = (
+        <Box flexDirection="column">
+          <Box flexDirection="row" justifyContent="space-between" paddingX={1}>
+            <Text dimColor bold>MATCHES</Text>
+            <Text dimColor bold>{results.length === 60 ? '60+' : String(results.length)}</Text>
+          </Box>
+          {rowsClient('search', results.map(p => rowFor(p, { dir: true })), `  No file matches “${v.query}”`)}
         </Box>
-        {results.length === 0 && <Box paddingLeft={2}><Text dimColor>No file matches “{v.query}”</Text></Box>}
-        {results.map(p => {
-          const t = touchedByPath.get(p)
-          return (
-            <Box flexDirection="column" key={`s:${p}`}>
-              <Box flexDirection="row" gap={1} alignItems="center" paddingLeft={1}>
-                {badge(p)}
-                {name(p, 'search', activeByPath.get(p), g.changed[p] ? C.uncommitted : undefined)}
-                <Text dimColor wrap="truncate-end">{relative(cwd, dirname(p)) || '.'}</Text>
-                {pill(t)}
-              </Box>
-              {previewBox(p, 'search')}
-            </Box>
-          )
-        })}
-      </Box>
-    ) : null
-
-    // --- All files tree ------------------------------------------------------------------------
-    const rows: RenderChildren[] = []
-    const hasLive = (dir: string) => active.some(t => isUnder(dir, t.path))
-    const hasChanges = (dir: string) => Object.keys(g.changed).some(p => isUnder(dir, p))
-    const walk = (dir: string, depth: number) => {
-      const entries = listing[dir]
-      if (!entries) {
-        rows.push(<Box paddingLeft={depth * 2 + 2} key={`l:${dir}`}><Text dimColor>loading…</Text></Box>)
-        return
-      }
-      for (const entry of entries) {
-        if (rows.length >= MAX_ROWS) return
-        if (v.hideHidden && entry.name.startsWith('.')) continue
-        const path = joinPath(dir, entry.name)
-        if (entry.isDir) {
-          const isOpen = v.expanded.includes(path)
-          const live = hasLive(path)
-          const color = live ? C.read : undefined
-          rows.push(
-            <Box flexDirection="row" gap={1} alignItems="center" paddingLeft={depth * 2} key={`d:${path}`}>
-              <Button
-                key={`dir:${path}`}
-                plain
-                onPress={() => {
-                  void (async () => {
-                    await setView(cur => ({
-                      ...cur,
-                      expanded: cur.expanded.includes(path) ? cur.expanded.filter(d => d !== path) : [...cur.expanded, path],
-                    }))
-                    if (!isOpen) await loadDir($, path)
-                  })()
-                }}
-              >
-                <Text dimColor>{isOpen ? '▾ ' : '▸ '}</Text>
-                <Text color={color ?? (hasChanges(path) ? C.uncommitted : undefined)}>{Svg ? '' : '🗀 '}</Text>
-              </Button>
-              {Svg ? svg(folderSvg(live ? C.read : C.folder, isOpen), 'folder') : null}
-              <Button
-                key={`dirname:${path}`}
-                plain
-                onPress={() => {
-                  void (async () => {
-                    await setView(cur => ({
-                      ...cur,
-                      expanded: cur.expanded.includes(path) ? cur.expanded.filter(d => d !== path) : [...cur.expanded, path],
-                    }))
-                    if (!isOpen) await loadDir($, path)
-                  })()
-                }}
-              >
-                <Text color={color ?? (hasChanges(path) ? C.uncommitted : undefined)}>{entry.name}</Text>
-              </Button>
-            </Box>,
-          )
-          if (isOpen) walk(path, depth + 1)
-        } else {
-          const t = activeByPath.get(path)
-          const done = touchedByPath.get(path)
-          const c = g.changed[path]
-          const right = t ? pill(t) : c ? (
-            <Text>
-              <Text color={C.uncommitted} bold>{c.code} </Text>
-              {c.adds || c.dels ? <Text><Text color={C.add}>{`+${c.adds}`}</Text><Text color={C.del}>{` -${c.dels}`}</Text></Text> : null}
-            </Text>
-          ) : done ? pill(done) : <Text dimColor>{v.showSizes ? sizeText(entry.size) : dateText(entry.mtimeMs)}</Text>
-          rows.push(
-            <Box flexDirection="column" key={`f:${path}`}>
-              <Box flexDirection="row" justifyContent="space-between" alignItems="center" paddingLeft={depth * 2 + 2} paddingY={t ? 'xs' : 0} backgroundColor={rowBg(t)}>
-                <Box flexDirection="row" gap={1} alignItems="center" flexShrink={1}>
-                  {badge(entry.name)}
-                  {name(path, 'tree', t, c ? C.uncommitted : done?.action === 'read' ? C.read : undefined)}
-                </Box>
-                {right}
-              </Box>
-              {previewBox(path, 'tree')}
-            </Box>,
-          )
+      )
+    } else {
+      const rows: RowSpec[] = []
+      const hasLive = (dir: string) => active.some(t => isUnder(dir, t.path))
+      const hasChanges = (dir: string) => Object.keys(g.changed).some(p => isUnder(dir, p))
+      const walk = (dir: string, depth: number) => {
+        const entries = listing[dir]
+        if (!entries) {
+          rows.push({ id: '', left: [{ t: `${'  '.repeat(depth + 1)}loading…`, dim: true }], right: [] })
+          return
+        }
+        for (const entry of entries) {
+          if (rows.length >= MAX_ROWS) return
+          if (v.hideHidden && entry.name.startsWith('.')) continue
+          const path = joinPath(dir, entry.name)
+          if (entry.isDir) {
+            const isOpen = v.expanded.includes(path)
+            const colour = hasLive(path) ? C.read : hasChanges(path) ? C.uncommitted : C.folder
+            rows.push({
+              id: `d:${path}`,
+              left: [{ t: '  '.repeat(depth) }, { t: isOpen ? '▾ ' : '▸ ', dim: true }, { t: `${entry.name}/`, c: colour, b: true }],
+              right: [],
+            })
+            if (isOpen) walk(path, depth + 1)
+          } else {
+            rows.push(rowFor(path, { indent: depth + 1 }))
+          }
         }
       }
-    }
-    walk(v.root, 0)
-    if (rows.length >= MAX_ROWS) rows.push(<Text dimColor key="more">… more files hidden, use Find a file</Text>)
-
-    const treeView = (
-      <Box flexDirection="column">
-        <Box flexDirection="row" justifyContent="space-between" paddingX={1}>
-          <Text dimColor bold>ALL FILES</Text>
-          <Text dimColor bold>{basename(v.root).toUpperCase() || '/'}</Text>
+      walk(v.root, 0)
+      if (rows.length >= MAX_ROWS) rows.push({ id: '', left: [{ t: '… more files hidden, use Find a file', dim: true }], right: [] })
+      lower = (
+        <Box flexDirection="column">
+          <Box flexDirection="row" justifyContent="space-between" paddingX={1}>
+            <Text dimColor bold>ALL FILES</Text>
+            <Text dimColor bold>{basename(v.root).toUpperCase() || '/'}</Text>
+          </Box>
+          {rowsClient('tree', rows, '  Empty folder')}
         </Box>
-        {rows}
-      </Box>
-    )
+      )
+    }
 
     return (
       <Box flexDirection="column" gap={1} paddingX={1}>
@@ -942,7 +964,7 @@ export const register: Register = on => {
         {search}
         {tools}
         {touchedCard}
-        {q ? resultsView : treeView}
+        {lower}
       </Box>
     )
   })

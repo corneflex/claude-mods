@@ -22,7 +22,7 @@ test('reads and edits show in the status card, touched list and tree', async ($,
   on('tool.register', () => ({ value: {} }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('clock.now', () => ({ value: 1_790_000_000_000 }))
-  on('clock.every', () => ({ value: { cancel: () => {} } }))
+  on('clock.every', () => ({ value: {} }))
   on('fs.exists', () => ({ value: true }))
   on('fs.read', () => ({ value: 'export const x = 1\n' }))
   on('fs.list', (_, e) => {
@@ -60,10 +60,27 @@ test('reads and edits show in the status card, touched list and tree', async ($,
     expect(await ui.find({ type: 'Text', text: /^main$/ })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /1 changed/ })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /ALL FILES/ })).toBeDefined()
-    await ui.press({ key: `touched:${ROOT}/src/client.js` })
-    expect(await ui.find({ type: 'Text', text: /git diff · src\/client.js/ })).toBeDefined()
-    expect(await ui.find({ type: 'Code' })).toBeDefined()
-    await ui.press({ key: `close:touched:${ROOT}/src/client.js` })
+    // The touched list is drawn by the animated Client; its rows carry the file names.
+    expect(await ui.find({ type: 'Text', text: /client\.js/, in: 'touched' })).toBeDefined()
+
+    // A press inside the Client opens the full-screen diff, inline in a narrow pane.
+    await ui.post({ press: `f:${ROOT}/src/client.js` }, { in: 'touched' })
+    expect(await ui.find({ type: 'Text', text: /git diff HEAD -- src\/client\.js/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'const a = 1' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'const b = 1' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /ALL FILES/ })).toBeUndefined()
+
+    // Side by side shows HEAD against the working tree; back returns to the tree.
+    await ui.press({ key: 'layout' })
+    expect(await ui.find({ type: 'Text', text: /\(HEAD\)  ↔/ })).toBeDefined()
+    await ui.press({ key: 'back' })
+    expect(await ui.find({ type: 'Text', text: /ALL FILES/ })).toBeDefined()
     await ui.unmount()
   }
+
+  // Surfaces without Client still list the rows and open the diff with a plain button.
+  const plain = await $.ui.mount({ ...PANE, surface: 'vscode' })
+  await plain.press({ key: `touched:f:${ROOT}/src/client.js` })
+  expect(await plain.find({ type: 'Text', text: 'const b = 1' })).toBeDefined()
+  await plain.unmount()
 })
