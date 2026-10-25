@@ -4,6 +4,8 @@ import type { EngineInterface, Register, RenderChildren } from 'claude-code'
 import type { Activity, Entry, FileAction, GitFile, GitInfo, Preview, Touched, View } from '../types'
 import type { RowSpec, RowsProps, Seg } from './rows'
 import { iconFor } from './icons'
+import { claudeScene } from './claude'
+import type { Scene } from './claude'
 import { highlightLines, langFor } from './highlight'
 import type { Tok } from './highlight'
 
@@ -129,31 +131,6 @@ function textWidth(s: string, px: number) {
 
 // The live name: a bright band sweeps across the letters, a scan line runs under them, and
 // edits get a blinking caret while new files type themselves in.
-function iconSvg(kind: 'thinking' | 'reading' | 'editing' | 'creating' | 'committed' | 'idle' | 'answered') {
-  const map = {
-    thinking: ['#2C2C2C', '#D8D8D8'],
-    idle: ['#2C2C2C', '#9A9A9A'],
-    answered: ['#2C2C2C', '#D8D8D8'],
-    reading: ['#2E2442', C.read],
-    editing: ['#3A2A1C', C.edit],
-    creating: ['#1B3328', C.create],
-    committed: ['#1B3328', C.commit],
-  } as const
-  const [bg, fg] = map[kind]
-  const glyphs: Record<typeof kind, string> = {
-    thinking: `<g transform="translate(26 26)"><g><path d="M0-10V10M-8.7-5L8.7 5M-8.7 5L8.7-5" stroke="${fg}" stroke-width="2.6" stroke-linecap="round"/><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="3s" repeatCount="indefinite"/></g></g>`,
-    idle: `<circle cx="26" cy="26" r="4" fill="${fg}"/>`,
-    answered: `<path d="M18 27l5 5 11-12" fill="none" stroke="${fg}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`,
-    reading: `<g><path d="M14 26c4-7 20-7 24 0-4 7-20 7-24 0z" fill="none" stroke="${fg}" stroke-width="2.4"/><circle cx="26" cy="26" r="3.6" fill="${fg}"><animate attributeName="cx" values="23;29;23" dur="1.6s" repeatCount="indefinite"/></circle></g>`,
-    editing: `<g><path d="M19 33l1.5-5.5L31 17l4 4-10.5 10.5z M29 19l4 4" fill="none" stroke="${fg}" stroke-width="2.4" stroke-linejoin="round"/><animateTransform attributeName="transform" type="translate" values="0 0;1.5 -1.5;0 0" dur="0.9s" repeatCount="indefinite"/></g>`,
-    creating: `<path d="M26 17v18M17 26h18" stroke="${fg}" stroke-width="3" stroke-linecap="round"><animate attributeName="opacity" values="1;0.4;1" dur="1.2s" repeatCount="indefinite"/></path>`,
-    committed: `<path d="M18 27l5 5 11-12" fill="none" stroke="${fg}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`,
-  }
-  const ring = kind === 'reading' || kind === 'editing' || kind === 'creating' || kind === 'thinking'
-    ? `<circle cx="26" cy="26" r="24" fill="none" stroke="${fg}" stroke-opacity="0.5" stroke-width="1.5"><animate attributeName="r" values="22;25;22" dur="1.6s" repeatCount="indefinite"/><animate attributeName="stroke-opacity" values="0.5;0;0.5" dur="1.6s" repeatCount="indefinite"/></circle>`
-    : ''
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="${bg}"/>${ring}${glyphs[kind]}</svg>`
-}
 
 // Shimmer palettes, darkest to brightest, and the tint behind a row Claude is working on.
 const PALETTES: Record<string, string[]> = {
@@ -597,7 +574,7 @@ export const register: Register = on => {
     const touchedByPath = new Map(list.map(t => [t.path, t]))
 
     // --- Right now / Done card -------------------------------------------------------------
-    type Kind = Parameters<typeof iconSvg>[0]
+    type Kind = Scene
     let kind: Kind = 'idle'
     let label = 'RIGHT NOW'
     let labelColor = C.dim
@@ -687,7 +664,7 @@ export const register: Register = on => {
     const statusCard = (
       <Box flexDirection="column" borderStyle="round" borderColor={C.border} backgroundColor={Svg ? C.card : undefined} padding={1} gap="sm">
         <Box flexDirection="row" gap={2} alignItems="center">
-          {Svg ? svg(iconSvg(kind), kind, kind !== 'idle' && kind !== 'answered' && kind !== 'committed') : <Text color={labelColor}>{kind === 'thinking' ? '✳' : '●'}</Text>}
+          {Svg ? svg(claudeScene(kind), `Claude, ${kind}`, true) : <Text color={labelColor}>{kind === 'thinking' ? '✳' : '●'}</Text>}
           <Box flexDirection="column" flexShrink={1}>
             <Text color={labelColor} bold size="caption">{label}</Text>
             <Text bold weight="bold" size="heading">{headline}</Text>

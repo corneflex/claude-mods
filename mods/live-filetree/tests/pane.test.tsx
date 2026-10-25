@@ -56,6 +56,13 @@ test('reads and edits show in the status card, touched list and tree', async ($,
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
     expect(await ui.find({ type: 'Text', text: /CLAUDE TOUCHED/ })).toBeDefined()
+    if (surface === 'desktop') {
+      // The status card draws an animated Claude acting out the current state (idle here: no turn started).
+      const scene = (await ui.findAll({ type: 'Svg' })).find(x => String((x.props as { alt?: string }).alt).startsWith('Claude,'))
+      expect((scene?.props as { alt?: string }).alt).toBe('Claude, idle')
+      expect((scene?.props as { isInteractive?: boolean }).isInteractive).toBe(true)
+      expect(String((scene?.props as { source?: string }).source)).toContain('animateTransform')
+    }
     expect((await ui.find({ type: 'Text', text: /^2 FILES$/ }))?.text).toBe('2 FILES')
     expect(await ui.find({ type: 'Text', text: /^main$/ })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /1 changed/ })).toBeDefined()

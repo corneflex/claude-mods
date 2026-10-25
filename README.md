@@ -151,14 +151,25 @@ edited). In the app the highlighted name animates. A screenshot of the pane will
 
 A **Files** pane that opens beside the chat in the desktop app (`/live-files` opens it anywhere).
 
-**Status card.** What Claude is doing right now, then what it did when the turn ends:
+**Status card.** What Claude is doing right now, then what it did when the turn ends, acted out by an animated
+pixel Claude:
 
-| While working | When done |
-|---|---|
-| `Claude is thinking` (spinning ✳) | `Claude committed 2 files` + short commit hash |
-| `Claude is reading 3 files` (purple) | `Claude edited 1 file` + path and `+1 -1` |
-| `Claude is editing client.js` (orange) | `Claude created 1 file` |
-| `Claude is creating notes.md` (green) | `Claude read 3 files` |
+![The seven Claude scenes](docs/screenshots/live-filetree-claude.png)
+
+*One frame of each scene, rendered from the mod's own SVGs.*
+
+| State | Card says | Claude… |
+|---|---|---|
+| thinking | `Claude is thinking` | paces, glances around and taps its chin; its thought bubble goes `?`, `…`, `!`, then a lightbulb pings |
+| reading | `Claude is reading 3 files` / `Claude read 3 files` | wears glasses over an open book, eyes scanning line by line, pages flipping, a "hmm…" |
+| editing | `Claude is editing client.js` / `Claude edited 1 file` | types furiously at a keyboard while code types itself into a little editor, sweating |
+| creating | `Claude is creating notes.md` / `Claude created 1 file` | swings a hammer as blocks drop onto a stack, sparks flying |
+| committed | `Claude committed 2 files` + short hash | leaps with arms up under a popping ✓ stamp and raining confetti |
+| idle | `Waiting for you` | dozes, breathing slowly, Z's drifting up |
+| answered | `Claude answered` | waves with happy eyes and a "Done!" speech bubble |
+
+Claude only moves in straight lines (it never spins or flips); props such as the hammer turn. The terminal
+shows a plain marker instead of the animation.
 
 Below it are the branch and how far it's ahead (`main ↑1`), then `clean, nothing changed` or
 `+A -D · N changed`. A legend shows the colours for Claude read, Claude edited and Not committed.
