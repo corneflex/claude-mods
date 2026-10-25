@@ -361,16 +361,31 @@ async function markStart($: EngineInterface, path: string, action: FileAction, v
   await revealPath($, path)
 }
 
+// A tool call on a file lasts milliseconds, so a file keeps glowing (shimmer, spinner, status card) this long after.
+const GLOW_MS = 8000
+
 async function markEnd($: EngineInterface, path: string, action: FileAction, ok: boolean) {
   // Keep the strongest thing Claude did to a file this turn.
   const rank: Record<FileAction, number> = { read: 0, edit: 1, create: 2, commit: 3 }
+  const glowUntil = (await $.clock.now()) + GLOW_MS
   await update($, touched, list =>
     list.map(t => {
       if (t.path !== path) return t
       const active = Math.max(0, t.active - 1)
       const kept = ok && rank[action] > rank[t.action] ? action : t.action
-      return { ...t, active, verb: active ? t.verb : undefined, action: kept }
+      return { ...t, active, action: kept, glowUntil }
     }),
+  )
+  $.clock.after(GLOW_MS + 50, () => void endGlow($))
+}
+
+// Settles files whose glow has run out into their badge.
+async function endGlow($: EngineInterface) {
+  const now = await $.clock.now()
+  const list = await read($, touched)
+  if (!list.some(t => t.verb && t.active === 0 && (t.glowUntil ?? 0) <= now)) return
+  await update($, touched, cur =>
+    cur.map(t => (t.verb && t.active === 0 && (t.glowUntil ?? 0) <= now ? { ...t, verb: undefined, glowUntil: undefined } : t)),
   )
 }
 
@@ -569,7 +584,8 @@ export const register: Register = on => {
     const svg = (source: string, alt: string, live = false) =>
       Svg ? <Svg source={source} alt={alt} isInteractive={live ? true : undefined} /> : null
 
-    const active = list.filter(t => t.active > 0)
+    const now = await $.clock.now()
+    const active = list.filter(t => t.verb && (t.active > 0 || (t.glowUntil ?? 0) > now))
     const activeByPath = new Map(active.map(t => [t.path, t]))
     const touchedByPath = new Map(list.map(t => [t.path, t]))
 

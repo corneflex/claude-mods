@@ -23,6 +23,7 @@ test('reads and edits show in the status card, touched list and tree', async ($,
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('clock.now', () => ({ value: 1_790_000_000_000 }))
   on('clock.every', () => ({ value: {} }))
+  on('clock.after', () => ({ value: {} }))
   on('fs.exists', () => ({ value: true }))
   on('fs.read', () => ({ value: 'export const x = 1\n' }))
   on('fs.list', (_, e) => {
@@ -57,9 +58,9 @@ test('reads and edits show in the status card, touched list and tree', async ($,
     const ui = await $.ui.mount({ ...PANE, surface })
     expect(await ui.find({ type: 'Text', text: /CLAUDE TOUCHED/ })).toBeDefined()
     if (surface === 'desktop') {
-      // The status card draws an animated Claude acting out the current state (idle here: no turn started).
+      // The status card draws an animated Claude acting out the current state: still editing, within the glow.
       const scene = (await ui.findAll({ type: 'Svg' })).find(x => String((x.props as { alt?: string }).alt).startsWith('Claude,'))
-      expect((scene?.props as { alt?: string }).alt).toBe('Claude, idle')
+      expect((scene?.props as { alt?: string }).alt).toBe('Claude, editing')
       expect((scene?.props as { isInteractive?: boolean }).isInteractive).toBe(true)
       expect(String((scene?.props as { source?: string }).source)).toContain('animateTransform')
     }
@@ -73,8 +74,10 @@ test('reads and edits show in the status card, touched list and tree', async ($,
     // File types show as coloured text labels, with no background.
     const label = await ui.find({ type: 'Text', text: 'JS  ', in: 'touched' })
     expect((label?.props as { color?: string }).color).toBe('#E8C46A')
-    expect(await ui.find({ type: 'Text', text: '✎ Edited', in: 'touched' })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: '◉ Opened', in: 'touched' })).toBeDefined()
+    // Just after the calls, both files still glow: a spinner beside their verb, not yet a badge.
+    expect(await ui.find({ type: 'Text', text: /^editing /, in: 'touched' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /^reading /, in: 'touched' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: '✎ Edited', in: 'touched' })).toBeUndefined()
     expect(JSON.stringify(await ui.drawn({ in: 'touched' }))).not.toContain('backgroundColor":"#')
 
     // A press inside the Client opens the full-screen diff, inline in a narrow pane.

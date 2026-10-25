@@ -5,6 +5,7 @@ export type Touched = {
   action: FileAction
   active: number
   verb?: 'reading' | 'editing' | 'creating'
+  glowUntil?: number
   at: number
 }
 

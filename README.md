@@ -185,8 +185,9 @@ shows a coloured file-type label (`JS`, `TS`, `MD`, `PY`…), its folder, `+/-` 
 
 **All files.** The project tree, with file-type labels and each file's date or size.
 
-**Live highlight.** While Claude works on a file, its name in both lists lights up: purple for reading,
-orange for editing, green for creating.
+**Live highlight.** While Claude works on a file, and for 8 seconds after (a read or an edit takes only
+milliseconds), its name in both lists lights up: purple for reading, orange for editing, green for creating.
+The status card's Claude acts out the same state meanwhile.
 - A bright band sweeps along the file name letter by letter.
 - A spinner turns beside the `reading` / `editing` / `creating` label.
 
