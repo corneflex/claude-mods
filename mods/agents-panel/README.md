@@ -170,7 +170,7 @@ In testing, tokens, tool counts and durations matched Claude Code's own completi
 |---|---|
 | `hooks/register.tsx` | Hooks (agent spawn, model steps, tool calls, turn end), the pane, and the character SVGs. |
 | `types/index.d.ts` | The state contract (`agents`, `runs`, `collapsed`, `now`); each agent keeps its last tool and when it used it. |
-| `tests/pane.test.tsx` | Rows, totals, characters by role, activities from tool calls, the `character` option, the commit stamp, and tools while busy. |
+| `tests/pane.test.tsx` | Rows, totals, characters by role, activities from tool calls, the `character` option, the commit stamp, tools while busy, and runs kept together across background-task notices. |
 
 ```bash
 claude plugin validate mods/agents-panel
@@ -186,6 +186,7 @@ The mod also registers a read-only tool, `mcp__agents-panel__state`, that return
 
 | Version | Changes |
 |---|---|
+| 0.7.1 | A background-task notice no longer starts a new run named after an agent ID, and a resumed agent stays in its run. |
 | 0.7.0 | No background animation: just the character, its tool and the gag. |
 | 0.6.2 | The passing things are drawn large across the background. |
 | 0.6.1 | The parallax shows only moving things (horses, an ambulance, a rocket, rolling rocks…), no landscape. |

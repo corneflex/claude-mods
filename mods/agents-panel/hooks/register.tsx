@@ -34,6 +34,8 @@ const BODY = '#E07F63'
 // Module variables start over on a reload; everything drawn lives in $.state.
 let mainTurn: { id: string; title: string } | undefined
 let lastPrompt = ''
+// A turn woken by a background-task notice continues the run it belongs to.
+let woken = false
 let ticking: { cancel: () => void } | undefined
 
 function priceFor(model: string) {
@@ -825,12 +827,13 @@ export const register: Register = (on, options) => {
   })
 
   on('prompt.submit', async ($, e, next) => {
-    if (!e.isMeta && !e.command && e.text.trim()) lastPrompt = e.text
+    woken = /^\s*<(task-notification|system-reminder)/.test(e.text)
+    if (!woken && !e.isMeta && !e.command && e.text.trim()) lastPrompt = e.text
     return next(e)
   })
 
   on('turn.start', async ($, e, next) => {
-    if (e.agentId === undefined) mainTurn = { id: e.turnId, title: titleOf(lastPrompt, await $.clock.now()) }
+    if (e.agentId === undefined && !(woken && mainTurn)) mainTurn = { id: e.turnId, title: titleOf(lastPrompt, await $.clock.now()) }
     return next(e)
   })
 
@@ -841,12 +844,14 @@ export const register: Register = (on, options) => {
     const at = await $.clock.now()
     const list = await read($, agents)
     const parent = e.parentAgentId ? list.find(a => a.id === e.parentAgentId) : undefined
-    let runId = parent?.runId ?? mainTurn?.id ?? `run-${at}`
+    // A resumed agent stays in the run it started in.
+    const known = list.find(a => a.id === id)
+    let runId = known?.runId || parent?.runId || mainTurn?.id || `run-${at}`
     let isNewRun = false
     await update($, runs, rs => {
       // With no turn known (a reload forgets it), agents started close together share the latest run.
       const latest = rs[rs.length - 1]
-      if (!parent && !mainTurn && latest && at - latest.startedAt < 30_000) runId = latest.id
+      if (!known && !parent && !mainTurn && latest && at - latest.startedAt < 30_000) runId = latest.id
       isNewRun = !rs.some(r => r.id === runId)
       if (!isNewRun) return rs
       const run: RunRow = { id: runId, title: mainTurn?.id === runId ? mainTurn.title : titleOf('', at), startedAt: at }
@@ -861,7 +866,7 @@ export const register: Register = (on, options) => {
         description: e.description || existing?.description || 'Subagent',
         type: e.subagentType,
         model: existing?.model || result.model,
-        avatar: index,
+        avatar: existing?.runId === runId ? existing.avatar : index,
       }
       return existing ? rows.map(r => (r.id === id ? row : r)) : [...rows, row].slice(-60)
     })
