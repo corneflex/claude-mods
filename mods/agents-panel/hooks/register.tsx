@@ -189,9 +189,17 @@ function pixels(rows: string[], x0: number, y0: number, colours: Record<string, 
   return layers
 }
 
-type Part = { hat: string[]; hatColours: Record<string, string>; vest?: string; props: string; body: string; arm: string }
+// Visible only between two moments of a loop (fractions of `dur`); the element starts at opacity 0.
+const pop = (dur: number, from: number, to: number) =>
+  `<animate attributeName="opacity" values="0;1;0" keyTimes="0;${from};${to}" dur="${dur}s" calcMode="discrete"${rep}/>`
+// Shown at `at`, flies off by (dx, dy) until `end`.
+const burst = (dur: number, at: number, end: number, dx: number, dy: number) =>
+  pop(dur, at, end) + move(`0 0;0 0;${dx} ${dy};${dx} ${dy}`, dur, ` keyTimes="0;${at};${end};1"`)
 
-// Canvas is 16×14; the critter's head starts at (3, 6). `props` is the character's signature gear.
+type Part = { hat: string[]; hatColours: Record<string, string>; vest?: string; gear: string; tool: string; body: string; arm: string }
+
+// Canvas is 26×19 from (-2, -4); the critter's head starts at (3, 6) and its right hand is at (12.6, 8.4).
+// `gear` is worn and always shows; `tool` is held in the right hand while the agent idles or thinks.
 function characterParts(c: Character, moving: boolean): Part {
   const a = (s: string) => (moving ? s : '')
   switch (c) {
@@ -199,9 +207,10 @@ function characterParts(c: Character, moving: boolean): Part {
       return {
         hat: ['..YYYYYY..', '.YYYWYYYY.'],
         hatColours: { Y: '#E8C547', W: '#FFF6C8' },
-        props:
-          // lamp beam, then a pickaxe swinging from the right hand, then dirt kicked up
-          `<polygon points="7.5,5.5 1,3 1,8" fill="#FFF6C8" opacity="0.35">${a(fade('0.15;0.45;0.15', 0.8))}</polygon>` +
+        // the helmet lamp's beam
+        gear: `<polygon points="7.5,5.5 1,3 1,8" fill="#FFF6C8" opacity="0.35">${a(fade('0.15;0.45;0.15', 0.8))}</polygon>`,
+        tool:
+          // a pickaxe swinging at the ground, kicking up dirt
           `<g>${a(spin('10 13 9;-55 13 9;15 13 9;10 13 9', 0.8, ' keyTimes="0;0.45;0.6;1"'))}` +
           `<rect x="12.6" y="3" width="0.8" height="6.5" fill="#8A5A3C"/><rect x="10.6" y="2.4" width="5" height="1.1" rx="0.5" fill="#9AA3AD"/></g>` +
           a([0, 1, 2].map(i =>
@@ -214,8 +223,9 @@ function characterParts(c: Character, moving: boolean): Part {
       return {
         hat: ['...HHHH...', '..HHHHHH..', 'HHHHHHHHHH'],
         hatColours: { H: '#8A5A3C' },
-        props:
-          // lasso loop spinning over the head on a rope from the raised hand
+        gear: `<rect x="5" y="9" width="6" height="0.5" fill="#E5534B"/>`,
+        tool:
+          // a lasso loop spinning over the head on a rope from the raised hand
           `<line x1="13" y1="8" x2="13.5" y2="2.5" stroke="#C9A36B" stroke-width="0.4"/>` +
           `<ellipse cx="13.5" cy="2" rx="2.4" ry="0.8" fill="none" stroke="#C9A36B" stroke-width="0.45">` +
           `${a('<animate attributeName="rx" values="2.4;0.4;2.4" dur="0.6s" repeatCount="indefinite"/>')}</ellipse>`,
@@ -227,23 +237,31 @@ function characterParts(c: Character, moving: boolean): Part {
         hat: ['..NNNNNN..', '.NNNYNNNN.', 'KKKKKKKKKK'],
         hatColours: { N: '#2D3E7A', Y: '#E8C547', K: '#14182A' },
         vest: '#2D3E7A',
-        props:
+        gear:
           // siren flashing red/blue with a glow, a badge on the chest
           `<circle cx="8" cy="2.6" r="2.2" fill="#E5534B" opacity="0.35">${a('<animate attributeName="fill" values="#E5534B;#4F86E0;#E5534B" dur="0.5s" repeatCount="indefinite"/>')}${a(fade('0.1;0.6;0.1', 0.25))}</circle>` +
           `<rect x="7" y="2" width="2" height="1.4" rx="0.3" fill="#E5534B">${a('<animate attributeName="fill" values="#E5534B;#4F86E0;#E5534B" dur="0.5s" repeatCount="indefinite" calcMode="discrete"/>')}</rect>` +
           px(9, 11, '#E8C547'),
+        // a pistol twirled on the finger like in the westerns
+        tool: `<g transform="translate(12.8 8.6)"><g>${a(spin('0;720;720', 2.4, ' keyTimes="0;0.3;1"'))}${pistol()}</g></g>`,
         body: '',
-        arm: a(move('0 0;0 -2;0 0;0 -2;0 0', 1)),
+        arm: a(move('0 0;0 -2;0 0;0 -2;0 0', 2)),
       }
     case 'nurse':
       return {
         hat: ['..WWRWWW..', '.WWRRRWWW.'],
         hatColours: { W: '#F4F4F4', R: '#E5534B' },
-        props:
+        gear:
           // hearts rising and beating beside the nurse
           [0, 1].map(i =>
             `<g opacity="0">${a(move(`0 0;${-0.5 + i} -6`, 2, ` begin="${i}s"`))}${a(fade('0;1;0', 2, ` begin="${i}s"`))}` +
             `<path d="M1.5 12 l-1.2 -1.2 a0.7 0.7 0 0 1 1.2 -0.9 a0.7 0.7 0 0 1 1.2 0.9 z" fill="#F07178"/></g>`).join(''),
+        // a syringe held up, needle first, squirting a test drop
+        tool:
+          `<g transform="translate(12.8 8.4)"><rect x="-0.5" y="-3.6" width="1" height="3" fill="#EAF6FF" stroke="#9AA3AD" stroke-width="0.15"/>` +
+          `<rect x="-0.35" y="-3.2" width="0.7" height="2.4" fill="#57C27A"/><rect x="-0.08" y="-5.2" width="0.16" height="1.6" fill="#D0D0D0"/>` +
+          `<rect x="-0.8" y="-0.6" width="1.6" height="0.3" fill="#9AA3AD"/>` +
+          `<circle cy="-5.4" r="0.3" fill="#57C27A" opacity="0">${a(burst(1.6, 0.6, 0.95, 0.4, -1.6))}</circle></g>`,
         body: a(move('-0.4 0;0.4 0;-0.4 0', 1.6)),
         arm: '',
       }
@@ -251,7 +269,7 @@ function characterParts(c: Character, moving: boolean): Part {
       return {
         hat: ['.KKKKKKKK.', 'KKKKKKKKKK', '.CCCCCCCC.'],
         hatColours: { K: '#1E1E24', C: '#4FC3E8' },
-        props:
+        gear:
           // wheels with spinning spokes, speed lines streaming behind
           [5, 12].map(cx =>
             `<g transform="translate(${cx} 12.6)"><circle r="1.4" fill="none" stroke="#2A2A2A" stroke-width="0.6"/>` +
@@ -259,6 +277,8 @@ function characterParts(c: Character, moving: boolean): Part {
           `<rect x="5" y="11.8" width="7" height="0.5" fill="#C8453A"/>` +
           a([9.6, 11, 12.4].map((y, i) =>
             `<rect x="0" y="${y - 3}" width="2" height="0.3" fill="#9AA3AD">${move('2 0;-2 0', 0.5, ` begin="${i * 0.15}s"`)}${fade('0;1;0', 0.5, ` begin="${i * 0.15}s"`)}</rect>`).join('')),
+        // a wrench spun in the hand, tough-guy style
+        tool: `<g transform="translate(12.8 8.4)"><g>${a(spin('0;360', 1.2))}${wrench()}</g></g>`,
         body: a(move('0 0;0 -0.3;0 0', 0.3)),
         arm: '',
       }
@@ -267,7 +287,8 @@ function characterParts(c: Character, moving: boolean): Part {
         hat: ['..OOOOOO..', 'OOOOOOOOOO'],
         hatColours: { O: '#F08A24' },
         vest: '#E8E04A',
-        props:
+        gear: `<rect x="5" y="8" width="0.4" height="2" fill="#F4F4F4"/><rect x="10.6" y="8" width="0.4" height="2" fill="#F4F4F4"/>`,
+        tool:
           // jackhammer at the right hand, shaking, with dust puffs at its tip
           `<g>${a(move('0 0;0.3 0.2;-0.2 -0.2;0.2 0.3;0 0', 0.15))}<rect x="13" y="7" width="1.6" height="1" fill="#555"/><rect x="13.5" y="8" width="0.7" height="4" fill="#9AA3AD"/></g>` +
           a([0, 1].map(i =>
@@ -280,12 +301,14 @@ function characterParts(c: Character, moving: boolean): Part {
         hat: ['..AAAAAA..', '.AA....AA.'],
         hatColours: { A: '#DDE3EA' },
         vest: '#DDE3EA',
-        props:
-          // visor bubble, antenna light and twinkling stars
+        gear:
+          // visor bubble, antenna light and a jetpack that puffs
           `<circle cx="8" cy="7.6" r="3.6" fill="#7FD1FF" fill-opacity="0.18" stroke="#DDE3EA" stroke-width="0.4"/>` +
           `<rect x="7.8" y="2.6" width="0.4" height="2" fill="#DDE3EA"/><circle cx="8" cy="2.4" r="0.5" fill="#E5534B">${a(fade('1;0.2;1', 1))}</circle>` +
-          [[1, 2], [14, 4], [2, 10], [15, 11]].map(([x, y], i) =>
-            `<circle cx="${x}" cy="${y}" r="0.35" fill="#FFF6C8">${a(fade('0.2;1;0.2', 1.4, ` begin="${i * 0.35}s"`))}</circle>`).join(''),
+          `<rect x="1.4" y="7.4" width="1.6" height="3.4" rx="0.4" fill="#9AA3AD"/>` +
+          `<path d="M1.6 10.8 h1.2 l-0.6 2z" fill="#F2B84B">${a('<animate attributeName="d" values="M1.6 10.8 h1.2 l-0.6 2z;M1.6 10.8 h1.2 l-0.6 1z;M1.6 10.8 h1.2 l-0.6 2.6z" dur="0.3s" repeatCount="indefinite"/>')}</path>`,
+        // a little flag, ready to claim something
+        tool: `<g transform="translate(12.8 8.4)">${flag(a)}</g>`,
         body: a(move('0 0;0 -1.2;0 0', 2.4) + move('-0.4 0;0.4 0;-0.4 0', 3.2, ' additive="sum"')),
         arm: a(move('0 0;0 -1;0 0', 2.4)),
       }
@@ -295,12 +318,14 @@ function characterParts(c: Character, moving: boolean): Part {
         hat: ['..DdDdDd..', '.dDdDdDdD.', 'D........D'],
         hatColours: { D: '#8A6A3C', d: '#6B4F2A' },
         vest: '#8A6A3C',
-        props:
+        gear:
           // a pipe at the mouth puffing smoke rings
           `<rect x="1.6" y="8.2" width="1.6" height="0.5" fill="#5A3A1E"/><rect x="1.2" y="7.4" width="0.8" height="1.2" fill="#5A3A1E"/>` +
           a([0, 1].map(i =>
             `<circle cx="1.6" cy="6.8" r="0.45" fill="none" stroke="#BBB" stroke-width="0.25" opacity="0">` +
             `${move('0 0;-0.8 -4', 2, ` begin="${i}s"`)}${fade('0;0.9;0', 2, ` begin="${i}s"`)}</circle>`).join('')),
+        // a magnifying glass, glinting
+        tool: `<g transform="translate(12.6 8.2)"><g>${a(move('0 0;0.6 -0.6;0 0', 2))}${magnifier()}</g></g>`,
         // tiptoes from side to side
         body: a(move('-0.6 0;-0.6 -0.3;0.6 0;0.6 -0.3;-0.6 0', 1.6)),
         arm: '',
@@ -311,9 +336,9 @@ function characterParts(c: Character, moving: boolean): Part {
         hat: ['......S...', '...PPPP...', '..PPPPPPP.'],
         hatColours: { P: '#7E5BC8', S: '#7E5BC8' },
         vest: '#E5534B',
-        props:
-          // a quill tucked behind the ear, bobbing
-          `<g>${a(move('0 0;0 -0.4;0 0', 1.2))}<path d="M13 6 q2 -3 3 -5 q-1 3 -2.4 5.4z" fill="#F4F4F4"/></g>`,
+        gear: '',
+        // the quill tucked behind the ear, bobbing
+        tool: `<g>${a(move('0 0;0 -0.4;0 0', 1.2))}<path d="M13 6 q2 -3 3 -5 q-1 3 -2.4 5.4z" fill="#F4F4F4"/></g>`,
         body: a(move('0 0;0 -0.3;0 0', 1.2)),
         arm: '',
       }
@@ -322,30 +347,52 @@ function characterParts(c: Character, moving: boolean): Part {
         // a mortarboard whose tassel swings
         hat: ['KKKKKKKKKK', '...KKKK...'],
         hatColours: { K: '#1E1E24' },
-        props:
-          `<g>${a(move('-0.4 0;0.4 0;-0.4 0', 1))}<rect x="12.4" y="4.4" width="0.3" height="2" fill="#E8C547"/><rect x="12.2" y="6.2" width="0.7" height="0.8" fill="#E8C547"/></g>` +
-          // a pointer stick tapping
-          `<g>${a(move('0 0;0.6 -0.6;0 0', 0.8))}<rect x="13" y="5" width="0.4" height="5" fill="#8A5A3C"/></g>`,
+        gear: `<g>${a(move('-0.4 0;0.4 0;-0.4 0', 1))}<rect x="12.4" y="4.4" width="0.3" height="2" fill="#E8C547"/><rect x="12.2" y="6.2" width="0.7" height="0.8" fill="#E8C547"/></g>`,
+        // a pointer stick tapping
+        tool: `<g>${a(move('0 0;0.6 -0.6;0 0', 0.8))}<rect x="13" y="5" width="0.4" height="5" fill="#8A5A3C"/></g>`,
         body: '',
         arm: a(move('0 0;0 -1;0 0', 0.8)),
       }
   }
 }
 
-// The props and moves of what the agent is doing right now. They play over any character.
-type Act = { props: string; body: string; arm: string; eyes: string }
+// Hand-held pieces, drawn around the grip at (0, 0).
+function pistol() {
+  return `<rect x="-0.4" y="-0.9" width="3" height="0.8" fill="#2A2D34"/><rect x="-0.2" y="-0.9" width="2.6" height="0.25" fill="#5A6070"/>` +
+    `<rect x="-0.4" y="-0.2" width="0.9" height="1.6" fill="#5A3A1E"/><rect x="0.5" y="-0.1" width="0.6" height="0.2" fill="#2A2D34"/>`
+}
+function wrench() {
+  return `<rect x="-0.25" y="-2" width="0.5" height="3.4" fill="#9AA3AD"/><path d="M-0.9 -2.6 h0.6 v0.6 h0.6 v-0.6 h0.6 v1 h-1.8z" fill="#9AA3AD"/>`
+}
+function magnifier() {
+  return `<rect x="-0.2" y="-0.3" width="0.5" height="2" fill="#5A3A1E" transform="rotate(-35)"/>` +
+    `<circle cx="1.6" cy="-1.8" r="1.4" fill="#7FD1FF" fill-opacity="0.35" stroke="#C9A36B" stroke-width="0.4"/>` +
+    `<rect x="0.8" y="-2.6" width="0.5" height="0.5" fill="#fff" opacity="0.8"/>`
+}
+function flag(a: (s: string) => string) {
+  const waves = 'M0.3 -6 q1.5 -0.6 3 0 v2 q-1.5 -0.6 -3 0z;M0.3 -6 q1.5 0.6 3 0 v2 q-1.5 0.6 -3 0z;M0.3 -6 q1.5 -0.6 3 0 v2 q-1.5 -0.6 -3 0z'
+  return `<rect x="0" y="-6.2" width="0.3" height="7" fill="#DDE3EA"/>` +
+    `<path d="M0.3 -6 q1.5 -0.6 3 0 v2 q-1.5 -0.6 -3 0z" fill="#E5534B">${a(`<animate attributeName="d" values="${waves}" dur="0.8s"${rep}/>`)}</path>` +
+    `<circle cx="1.8" cy="-5" r="0.4" fill="#F4F4F4"/>`
+}
+
+// What the agent is doing right now. `object` is the thing it works on, drawn right of the character and
+// shifted onto `target` space by +3; `under` sits beneath its feet. `target` is the object's centre on the canvas.
+type Act = { object: string; under: string; target: [number, number]; body: string; arm: string; eyes: string }
 
 function activityParts(act: Activity): Act {
   switch (act) {
     case 'thinking':
       // taps its chin while a thought bubble goes ?, …, then a lightbulb
       return {
-        props:
+        object:
           `<path d="M12.6 -3.4h5.2a1.4 1.4 0 0 1 1.4 1.4v2.2a1.4 1.4 0 0 1-1.4 1.4h-3l-1.4 1.2v-1.2h-0.8a1.4 1.4 0 0 1-1.4-1.4v-2.2a1.4 1.4 0 0 1 1.4-1.4z" fill="#F4F4F4"/>` +
           [['?', 0, 0.33], ['…', 0.33, 0.66]].map(([t, a, b]) =>
             `<g opacity="0"><animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;${a};${Number(b) - 0.01};${b};1" dur="3s"${rep}/>${word(14.4, -0.9, String(t), '#2A1A14', 2.2)}</g>`).join('') +
           `<g opacity="0"><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.66;0.67;1" dur="3s"${rep}/>` +
           `<circle cx="15.2" cy="-1.6" r="1.2" fill="#FFD54F"/><rect x="14.7" y="-0.5" width="1" height="0.6" fill="#9E9E9E"/></g>`,
+        under: '',
+        target: [18.4, -1.4],
         body: '',
         arm: move('0 0;0 -1.4;0 -1;0 -1.4;0 0', 1.2),
         eyes: move('0 0;0.4 -0.3;0.4 -0.3;-0.4 -0.3;0 0', 3),
@@ -353,13 +400,15 @@ function activityParts(act: Activity): Act {
     case 'reading':
       // a magnifying glass sweeps a page line by line; a "?!" pops when it finds something
       return {
-        props:
+        object:
           `<rect x="13.4" y="5.6" width="4.4" height="6" fill="#F4F4F4"/>` +
           [6.8, 8, 9.2, 10.4].map(y => px(14, y, '#B0B0B0', 3.2, 0.4)).join('') +
           `<g>${move('0 0;2.4 0;0 1.2;2.4 1.2;0 2.4;2.4 2.4;0 0', 3, ` keyTimes="0;0.16;0.33;0.5;0.66;0.83;1"`)}` +
           `<circle cx="14.4" cy="7" r="1.3" fill="#7FD1FF" fill-opacity="0.35" stroke="#9AA3AD" stroke-width="0.4"/>` +
           `<rect x="15.2" y="7.8" width="0.5" height="1.8" fill="#8A5A3C"/></g>` +
           `<g opacity="0"><animate attributeName="opacity" values="0;0;1;0" keyTimes="0;0.7;0.75;0.95" dur="3s"${rep}/>${word(15.4, 4.6, '?!', '#E5534B', 2)}</g>`,
+        under: '',
+        target: [18.6, 8.6],
         body: move('0 0;0 0.3;0 0', 1.5),
         arm: move('0 0;0 -0.8;0 0', 1.5),
         eyes: move('0.6 0;0.6 0.3;0.6 0', 1.5),
@@ -367,7 +416,7 @@ function activityParts(act: Activity): Act {
     case 'writing':
       // a pencil scribbles lines onto a sheet; every so often a crumpled draft flies over its shoulder
       return {
-        props:
+        object:
           `<rect x="13.4" y="6.4" width="4.4" height="5.4" fill="#F4F4F4"/>` +
           [7.4, 8.6, 9.8, 11].map((y, i) =>
             `<rect x="14" y="${y}" height="0.4" width="0" fill="#555"><animate attributeName="width" values="0;0;3.2;3.2" keyTimes="0;${(i * 0.22).toFixed(2)};${(i * 0.22 + 0.2).toFixed(2)};1" dur="3.4s"${rep}/></rect>`).join('') +
@@ -376,6 +425,8 @@ function activityParts(act: Activity): Act {
           // the crumpled draft, tossed over the shoulder near the end of each page
           `<circle cx="13" cy="7" r="0.9" fill="#D8D8D8" opacity="0">` +
           `${move('0 0;0 0;-7 -8;-14 2', 3.4, ' keyTimes="0;0.6;0.8;1"')}${fade('0;0;1;0', 3.4, ' keyTimes="0;0.6;0.62;1"')}</circle>`,
+        under: '',
+        target: [18.6, 9.1],
         body: move('0 0;0 0.2;0 0', 0.4),
         arm: move('0 0;0 -0.5;0 0', 0.3),
         eyes: move('0.5 0.3;0.5 0.3', 1),
@@ -383,7 +434,7 @@ function activityParts(act: Activity): Act {
     case 'running':
       // hammers the keyboard while a little terminal scrolls, then smokes a bit
       return {
-        props:
+        object: `<g transform="translate(0 6)">` +
           `<rect x="11.6" y="-3.2" width="7.6" height="6" rx="0.4" fill="#1E1E1E" stroke="#3C3C3C" stroke-width="0.25"/>` +
           `<rect x="11.6" y="-3.2" width="7.6" height="1" rx="0.4" fill="#2D2D2D"/>` +
           `<circle cx="12.2" cy="-2.7" r="0.22" fill="#FF5F57"/><circle cx="12.9" cy="-2.7" r="0.22" fill="#FEBC2E"/><circle cx="13.6" cy="-2.7" r="0.22" fill="#28C840"/>` +
@@ -395,8 +446,10 @@ function activityParts(act: Activity): Act {
           `<rect x="18" y="1.6" width="0.5" height="0.9" fill="#D4D4D4">${fade('1;0;1', 0.6)}</rect>` +
           [0, 1].map(i =>
             `<circle cx="${15 + i}" cy="-3.4" r="0.6" fill="#888" opacity="0"><animate attributeName="r" values="0.4;1.4" dur="1.5s" begin="${1.5 + i * 0.3}s"${rep}/>` +
-            `${move('0 0;0.5 -2.5', 1.5, ` begin="${1.5 + i * 0.3}s"`)}${fade('0;0.8;0', 1.5, ` begin="${1.5 + i * 0.3}s"`)}</circle>`).join('') +
-          `<rect x="3" y="12.2" width="10" height="0.9" rx="0.2" fill="#3C3C3C"/>`,
+            `${move('0 0;0.5 -2.5', 1.5, ` begin="${1.5 + i * 0.3}s"`)}${fade('0;0.8;0', 1.5, ` begin="${1.5 + i * 0.3}s"`)}</circle>`).join('') + `</g>`,
+        under: `<rect x="3" y="12.2" width="10" height="0.9" rx="0.2" fill="#3C3C3C"/>` +
+          [4, 6, 8, 10].map((x, i) => `<rect x="${x}" y="12.4" width="1.2" height="0.4" fill="#6A6A6A">${fade('1;0.3;1', 0.36, ` begin="${i * 0.09}s"`)}</rect>`).join(''),
+        target: [18.4, 6],
         body: move('0 0;0 0.25;0 0', 0.24),
         arm: move('0 0;0 -0.8;0 0', 0.18),
         eyes: move('0.4 -0.4;0.4 -0.4', 1),
@@ -404,11 +457,12 @@ function activityParts(act: Activity): Act {
     case 'web':
       // surfs the web: rides a wave on a surfboard under a "www" banner
       return {
-        props:
-          `<g>${move('0 0;-4 0', 1, ' calcMode="linear"')}<path d="M-6 13.4 q2 -1.6 4 0 t4 0 t4 0 t4 0 t4 0 t4 0 t4 0 V15 H-6z" fill="#4F86E0" opacity="0.85"/></g>` +
+        object: `<g>${move('0 0;0 -0.6;0 0', 1.2)}${word(13.6, 6.6, 'www', '#56D4DD', 2)}</g>`,
+        under:
+          `<g>${move('0 0;-4 0', 1, ' calcMode="linear"')}<path d="M-6 13.4 q2 -1.6 4 0 t4 0 t4 0 t4 0 t4 0 t4 0 t4 0 t4 0 V15 H-6z" fill="#4F86E0" opacity="0.85"/></g>` +
           `<rect x="2" y="11.8" width="12" height="0.9" rx="0.45" fill="#E8C547"/>` +
-          `<g>${move('0 0;0 -0.6;0 0', 1.2)}${word(13.6, 1, 'www', '#56D4DD', 2)}</g>` +
           [0, 1].map(i => `<circle cx="${1 + i * 2}" cy="12.4" r="0.4" fill="#BFE3FF" opacity="0">${move('0 0;-2 -1.6', 0.8, ` begin="${i * 0.4}s"`)}${fade('0;1;0', 0.8, ` begin="${i * 0.4}s"`)}</circle>`).join(''),
+        target: [18.4, 5.8],
         body: move('0 -0.6;0.8 -1.2;0 -0.6;-0.8 -1;0 -0.6', 1.6),
         arm: move('0 -1.2;0 -1.6;0 -1.2', 0.8),
         eyes: move('0.4 0;0.4 0', 1),
@@ -416,10 +470,12 @@ function activityParts(act: Activity): Act {
     case 'delegating':
       // throws paper airplanes at the team
       return {
-        props: [0, 1].map(i =>
+        object: [0, 1].map(i =>
           `<g opacity="0">${move(`0 0;5 -6;9 -9`, 1.4, ` begin="${i * 0.7}s"`)}${fade('1;1;0', 1.4, ` begin="${i * 0.7}s"`)}` +
           `<path d="M12.6 7.6 l3 -1.2 l-1.4 2.2z M12.6 7.6 l1.6 0.4" fill="#F4F4F4" stroke="#BBB" stroke-width="0.15"/></g>`).join('') +
           `<g opacity="0"><animate attributeName="opacity" values="0;1;0" dur="1.4s"${rep}/>${word(13.8, 3.4, '→', '#9A9A9A', 1.8)}</g>`,
+        under: '',
+        target: [19, 6],
         body: move('0 0;0.4 0;0 0', 0.7),
         arm: move('0 0;0 -2;0 0', 0.7),
         eyes: move('0.4 -0.3;0.4 -0.3', 1),
@@ -427,16 +483,273 @@ function activityParts(act: Activity): Act {
     case 'tooling':
       // fiddles with a turning gear
       return {
-        props:
-          `<g transform="translate(15.4 4)"><g>${spin('0;360', 1.6)}<circle r="1.4" fill="#9AA3AD"/>` +
+        object:
+          `<g transform="translate(15.4 7.5)"><g>${spin('0;360', 1.6)}<circle r="1.4" fill="#9AA3AD"/>` +
           [0, 60, 120].map(d => `<rect x="-0.35" y="-2" width="0.7" height="4" fill="#9AA3AD" transform="rotate(${d})"/>`).join('') +
           `<circle r="0.5" fill="#1E1E1E"/></g></g>`,
+        under: '',
+        target: [18.4, 7.5],
         body: move('0 0;0 0.2;0 0', 0.6),
         arm: move('0 0;0 -1;0 0', 0.6),
         eyes: move('0.4 -0.3;0.4 -0.3', 1),
       }
   }
 }
+
+// How each character uses its own tool on whatever it is working on. `tool` rides in the right hand,
+// `hit` lands on the object at `target`, and `react` is how the object takes it.
+type Use = { tool: string; hit: string; react: string }
+
+function useParts(c: Character, [tx, ty]: [number, number]): Use {
+  const shout = (text: string, fill: string, dur: number, from: number, to: number, x = tx - 2.6, y = ty - 3.4) =>
+    `<g opacity="0">${pop(dur, from, to)}${word(x, y, text, fill, 1.4)}</g>`
+  switch (c) {
+    case 'digger': {
+      // swings the pickaxe into it: TOK!, rock chips fly and a crack appears
+      const d = 1.2
+      return {
+        tool: `<g transform="translate(12.6 8.4)"><g>${spin('-40;88;88;-40', d, ' keyTimes="0;0.4;0.5;1"')}` +
+          `<rect x="-0.35" y="-5.4" width="0.7" height="5.8" fill="#8A5A3C"/><path d="M-2.6 -5.4 q2.6 -1.6 6 0.4 l-0.4 0.7 q-2.6 -1.2 -5.2 -0.4z" fill="#B8C0C8"/></g></g>`,
+        hit: `<path d="M${tx - 1.6} ${ty - 1.6} l0.8 1 l-0.6 0.8 l1 1.2 M${tx - 0.8} ${ty - 0.6} l1.2 -0.4" stroke="#3A3A3A" stroke-width="0.25" fill="none" opacity="0">${pop(d, 0.42, 1)}</path>` +
+          [0, 1, 2].map(i => `<rect x="${tx - 2}" y="${ty - 0.4}" width="0.7" height="0.7" fill="#8A8A8A" opacity="0">${burst(d, 0.42, 0.8, -1.4 - i, -2.4 + i * 1.4)}</rect>`).join('') +
+          shout('TOK!', '#FFD54F', d, 0.4, 0.62),
+        react: move('0 0;0 0;0.6 0.2;-0.4 0;0 0', d, ' keyTimes="0;0.4;0.47;0.56;1"'),
+      }
+    }
+    case 'cowboy': {
+      // whirls the lasso, throws it round the thing and yanks it over: YEEHAW!
+      const d = 1.8
+      const rope = '#C9A36B'
+      return {
+        tool:
+          `<g opacity="0">${pop(d, 0, 0.45)}<line x1="12.8" y1="8.2" x2="13.2" y2="2.8" stroke="${rope}" stroke-width="0.35"/>` +
+          `<ellipse cx="13.2" cy="2.2" rx="2.4" ry="0.8" fill="none" stroke="${rope}" stroke-width="0.45"><animate attributeName="rx" values="2.4;0.6;2.4" dur="0.4s"${rep}/></ellipse></g>` +
+          `<path d="M12.8 8.2 Q${(12.8 + tx) / 2} ${ty - 4} ${tx - 2.4} ${ty}" stroke="${rope}" stroke-width="0.35" fill="none" opacity="0">${pop(d, 0.45, 1)}</path>`,
+        hit: `<ellipse cx="${tx}" cy="${ty}" rx="3" ry="1.1" fill="none" stroke="${rope}" stroke-width="0.45" opacity="0">${pop(d, 0.45, 1)}` +
+          `<animate attributeName="rx" values="3.4;3.4;2.4;2.4" keyTimes="0;0.45;0.55;1" dur="${d}s"${rep}/></ellipse>` +
+          shout('YEEHAW!', '#F2B84B', d * 2, 0.3, 0.45, 5, -2.4),
+        react: move('0 0;0 0;-1.6 0.3;-1.2 0;-1.2 0;0 0', d, ' keyTimes="0;0.5;0.6;0.7;0.9;1"'),
+      }
+    }
+    case 'police': {
+      // fires at it: muzzle flash, BANG!, a casing flies and bullet holes pile up
+      const d = 1
+      return {
+        tool: `<g transform="translate(12.6 8)"><g>${move('0 0;0 0;-0.8 -0.4;0 0', d, ' keyTimes="0;0.35;0.42;1"')}${pistol()}` +
+          `<polygon points="2.7,-0.5 3.4,-1.5 3.7,-0.8 4.8,-0.5 3.7,-0.2 3.4,0.5" fill="#FFD54F" opacity="0">${pop(d, 0.35, 0.45)}</polygon>` +
+          `<rect x="1" y="-1.2" width="0.45" height="0.25" fill="#E8C547" opacity="0">${burst(d, 0.37, 0.8, -1.6, -2.6)}</rect>` +
+          `<circle cx="2.8" cy="-0.6" r="0.4" fill="#BBB" opacity="0">${burst(d, 0.45, 0.95, 0.6, -2)}</circle></g></g>`,
+        hit: [[-1, -1.6], [0.8, 0.2], [-0.4, 1.8]].map(([x, y], i) =>
+          `<g opacity="0">${pop(d * 3, Number(((i + 0.4) / 3).toFixed(3)), 1)}<circle cx="${tx + x!}" cy="${ty + y!}" r="0.45" fill="#1E1E1E"/>` +
+          `<circle cx="${tx + x!}" cy="${ty + y!}" r="0.8" fill="none" stroke="#666" stroke-width="0.15"/></g>`).join('') +
+          shout('BANG!', '#FFD54F', d, 0.35, 0.6),
+        react: move('0 0;0 0;0.5 -0.5;0 0', d, ' keyTimes="0;0.35;0.42;1"'),
+      }
+    }
+    case 'nurse': {
+      // gives it a jab: "ouch!", a plaster goes on and it heals up with little green crosses
+      const d = 1.6
+      const kt = ' keyTimes="0;0.3;0.7;1"'
+      return {
+        tool: `<g transform="translate(12.4 8)"><g>${move('0 0;1.6 0;1.6 0;0 0', d, kt)}` +
+          `<rect x="0" y="-0.55" width="3" height="1.1" fill="#EAF6FF" stroke="#9AA3AD" stroke-width="0.15"/>` +
+          `<rect x="0.15" y="-0.4" width="2.7" height="0.8" fill="#57C27A"><animate attributeName="width" values="2.7;2.7;0.4;0.4" dur="${d}s"${kt}${rep}/>` +
+          `<animate attributeName="x" values="0.15;0.15;2.45;0.15" dur="${d}s"${kt}${rep}/></rect>` +
+          `<g>${move('0 0;0 0;2.3 0;0 0', d, ' keyTimes="0;0.35;0.65;1"')}<rect x="-1.2" y="-0.15" width="1.4" height="0.3" fill="#9AA3AD"/><rect x="-1.4" y="-0.6" width="0.3" height="1.2" fill="#9AA3AD"/></g>` +
+          `<rect x="3" y="-0.08" width="1.8" height="0.16" fill="#D0D0D0"/></g></g>`,
+        hit: shout('ouch!', '#F07178', d, 0.35, 0.7) +
+          `<g opacity="0">${pop(d, 0.7, 1)}<rect x="${tx - 1.8}" y="${ty - 1.6}" width="2.4" height="0.9" rx="0.3" fill="#E8C9A0" transform="rotate(-25 ${tx - 0.6} ${ty - 1.2})"/>` +
+          `<rect x="${tx - 0.9}" y="${ty - 1.5}" width="0.6" height="0.7" fill="#D4B080" transform="rotate(-25 ${tx - 0.6} ${ty - 1.2})"/></g>` +
+          [0, 1].map(i => `<path d="M${tx + 0.6 + i} ${ty - 2.4}h0.9M${tx + 1.05 + i} ${ty - 2.85}v0.9" stroke="#57C27A" stroke-width="0.35" opacity="0">${burst(d, 0.72 + i * 0.1, 1, 0, -2)}</path>`).join(''),
+        react: move('0 0;0 0;0.2 -0.3;-0.2 0;0.2 -0.3;0 0', d, ' keyTimes="0;0.35;0.45;0.55;0.65;1"'),
+      }
+    }
+    case 'biker': {
+      // revs it up: VROOM!, exhaust smoke behind, sparks off the wrench and the thing gets blown about
+      const d = 0.8
+      return {
+        tool: `<g transform="translate(12.8 8.4)"><g>${spin('0;360', 0.6)}${wrench()}</g></g>`,
+        hit: [0, 1, 2].map(i => `<circle cx="${tx - 2.4}" cy="${ty}" r="0.25" fill="#F2B84B" opacity="0">${burst(d, i * 0.2, i * 0.2 + 0.5, 1 + i, -1.6 + i * 1.2)}</circle>`).join('') +
+          [0, 1].map(i => `<circle cx="1.6" cy="12.4" r="0.5" fill="#9A9A9A" opacity="0"><animate attributeName="r" values="0.4;1.6" dur="${d}s" begin="${i * 0.4}s"${rep}/>` +
+            `${move('0 0;-3 -1', d, ` begin="${i * 0.4}s"`)}${fade('0.8;0', d, ` begin="${i * 0.4}s"`)}</circle>`).join('') +
+          [ty - 1, ty, ty + 1].map((y, i) => `<rect x="${tx - 3}" y="${y}" width="1.6" height="0.25" fill="#DDD" opacity="0">${burst(d, i * 0.25, i * 0.25 + 0.4, 5, 0)}</rect>`).join('') +
+          shout('VROOM!', '#F2B84B', d * 3, 0.1, 0.4, 3, -2.4),
+        react: move('0 0;0.25 0;-0.2 0.1;0 0', 0.3),
+      }
+    }
+    case 'worker': {
+      // jackhammers it: RATATA!, dust everywhere and cracks spreading
+      const d = 0.9
+      return {
+        tool: `<g transform="translate(12.4 8)"><g>${move('0 0;0.2 0.1;-0.1 -0.1;0 0', 0.12)}` +
+          `<rect x="-0.4" y="-1.4" width="0.5" height="2.8" fill="#333"/><rect x="0" y="-0.8" width="2.6" height="1.6" rx="0.3" fill="#F08A24"/>` +
+          `<rect x="0.4" y="-0.5" width="1.6" height="0.25" fill="#C8691A"/>` +
+          `<g>${move('0 0;0.6 0;0 0', 0.12)}<rect x="2.6" y="-0.25" width="2.4" height="0.5" fill="#9AA3AD"/></g></g></g>`,
+        hit: `<path d="M${tx - 2} ${ty} l1 -0.6 l0.6 0.8 l1 -0.4 M${tx - 1} ${ty - 0.6} l0.2 -1.2 M${tx - 0.4} ${ty + 0.2} l0.4 1.2" stroke="#3A3A3A" stroke-width="0.22" fill="none" opacity="0">${pop(d * 2, 0.3, 1)}</path>` +
+          [0, 1, 2].map(i => `<circle cx="${tx - 2.2}" cy="${ty}" r="0.4" fill="#C9B79C" opacity="0"><animate attributeName="r" values="0.4;1.6" dur="${d}s" begin="${i * 0.3}s"${rep}/>` +
+            `${move(`0 0;${-0.6 + i * 0.6} -1.6`, d, ` begin="${i * 0.3}s"`)}${fade('0.8;0', d, ` begin="${i * 0.3}s"`)}</circle>`).join('') +
+          shout('RATATA!', '#F2B84B', d * 2, 0.1, 0.5),
+        react: move('0 0;0.25 0.1;-0.2 -0.1;0 0', 0.15),
+      }
+    }
+    case 'astronaut': {
+      // plants the flag in it and claims it for science; it floats off in zero gravity
+      const d = 2.4
+      return {
+        tool: `<g transform="translate(12.8 8.4)"><g>${move('0 0;1.8 -0.6;1.8 -0.6;0 0', d, ' keyTimes="0;0.3;0.6;1"')}${flag(s => s)}</g></g>`,
+        hit: shout('MINE!', '#7FD1FF', d, 0.32, 0.62) +
+          [0, 1, 2].map(i => `<circle cx="${tx}" cy="${ty}" r="0.3" fill="#FFF6C8" opacity="0.8">` +
+            move(`-3 0;0 -2.4;3 0;0 2.4;-3 0`, 2.4, ` begin="${i * 0.8}s"`) + `</circle>`).join(''),
+        react: move('0 0;0 -1.4;0 0', d),
+      }
+    }
+    case 'detective': {
+      // inspects it closely: finds a fingerprint, AHA!, and the suspect sweats
+      const d = 2
+      return {
+        tool: `<g transform="translate(12.6 8)"><g>${move('0 0;1.4 -0.6;1.6 0.6;0 0', d, ' keyTimes="0;0.3;0.6;1"')}${magnifier()}</g></g>`,
+        hit: `<g opacity="0">${pop(d, 0.4, 1)}` + [0.4, 0.8, 1.2].map(r =>
+          `<path d="M${tx - r} ${ty + 0.4} a${r} ${r * 1.2} 0 0 1 ${2 * r} 0" fill="none" stroke="#6B4F2A" stroke-width="0.18"/>`).join('') + `</g>` +
+          shout('AHA!', '#E8C547', d, 0.45, 0.75) +
+          `<path d="M${tx + 2} ${ty - 3} q0.5 0.9 0 1.4 q-0.5 -0.5 0 -1.4z" fill="#7FD1FF" opacity="0">${burst(d, 0.5, 1, 0, 2)}</path>`,
+        react: move('0 0;0.12 0;-0.12 0;0 0', 0.2),
+      }
+    }
+    case 'writer': {
+      // flourishes the quill in the air; ink flicks over and blots it
+      const d = 1.6
+      return {
+        tool: `<g transform="translate(12.6 8)"><g>${move('0 0;0.8 -0.6;1.4 0;2 -0.6;0 0', d)}` +
+          `<path d="M0 0 q1.6 -2.8 3.4 -4.6 q-0.6 2.6 -2.8 5z" fill="#F4F4F4"/><path d="M0 0 l0.5 -0.3" stroke="#1E1E24" stroke-width="0.3"/></g></g>`,
+        hit: [0, 1, 2].map(i => `<circle cx="${14.6}" cy="${7}" r="0.3" fill="#1E1E24" opacity="0">${burst(d, i * 0.25, i * 0.25 + 0.3, tx - 14.6 - 1 + i, ty - 7 - 1 + i)}</circle>`).join('') +
+          [[-1, -1], [0.4, 0], [-0.6, 1.2]].map(([x, y], i) => `<path d="M${tx + x!} ${ty + y!} q0.4 -0.6 0.8 0 q0.4 0.5 -0.4 0.8 q-0.8 0 -0.4 -0.8z" fill="#1E1E24" opacity="0">${pop(d * 2, Number((0.15 + i * 0.25).toFixed(2)), 1)}</path>`).join('') +
+          shout('✒ voilà', '#C9A0FF', d * 2, 0.8, 0.98),
+        react: move('0 0;0 -0.3;0 0', 0.8),
+      }
+    }
+    case 'teacher': {
+      // taps it with the pointer: chalk dust, and it gets a gold star and an A+
+      const d = 1.2
+      return {
+        tool: `<g transform="translate(12.6 8)"><g>${spin('-25;6;6;-25', d, ' keyTimes="0;0.4;0.5;1"')}` +
+          `<rect x="0" y="-0.2" width="5.6" height="0.4" fill="#8A5A3C"/><rect x="5.2" y="-0.2" width="0.6" height="0.4" fill="#F4F4F4"/></g></g>`,
+        hit: [0, 1].map(i => `<circle cx="${tx - 1}" cy="${ty}" r="0.4" fill="#F4F4F4" opacity="0">${burst(d, 0.42, 0.9, -0.6 + i * 1.2, -1.4)}</circle>`).join('') +
+          `<path d="M${tx + 1.4} ${ty - 2.6} l0.35 0.7 0.75 0.1 -0.55 0.5 0.15 0.75 -0.7 -0.35 -0.7 0.35 0.15 -0.75 -0.55 -0.5 0.75 -0.1z" fill="#FFD54F" opacity="0">${pop(d, 0.42, 1)}</path>` +
+          shout('A+', '#E5534B', d, 0.45, 1, tx - 0.8, ty + 0.6),
+        react: move('0 0;0 0;0 -0.5;0 0', d, ' keyTimes="0;0.4;0.47;1"'),
+      }
+    }
+  }
+}
+
+// Three layers of scenery scroll behind the character at different speeds. Each tile covers the 26-unit canvas.
+function sceneryOf(c: Character): [string, string, string] {
+  const each = (xs: number[], f: (x: number, i: number) => string) => xs.map(f).join('')
+  switch (c) {
+    case 'digger':
+      return [
+        `<path d="M-2 -4H24V-2.4L22 -1 20.5 -2.6 18 0.2 15.5 -2.2 13 -1.2 10.5 -3 8 -0.6 5.5 -2.4 3 -1 0.5 -2.8 -2 -1.2z" fill="#5A4636"/>` +
+          `<circle cx="4" cy="2" r="0.35" fill="#56D4DD"/><circle cx="15" cy="-0.4" r="0.35" fill="#E5534B"/><circle cx="21" cy="5" r="0.35" fill="#56D4DD"/>`,
+        each([3, 16], x => `<rect x="${x}" y="-2" width="0.8" height="16" fill="#7A5634"/><rect x="${x + 6}" y="-2" width="0.8" height="16" fill="#7A5634"/>` +
+          `<rect x="${x - 0.4}" y="-2.4" width="7.6" height="1" fill="#8A6A44"/><line x1="${x + 3.4}" y1="-1.4" x2="${x + 3.4}" y2="0" stroke="#999" stroke-width="0.15"/>` +
+          `<circle cx="${x + 3.4}" cy="0.4" r="0.5" fill="#FFD54F"/>`),
+        `<rect x="-2" y="14" width="26" height="0.35" fill="#9A9A9A"/>` + each([-2, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22], x => `<rect x="${x}" y="14.3" width="1" height="0.7" fill="#6B4A2E"/>`) +
+          `<path d="M17 11.6 h4 l-0.5 2.2 h-3z" fill="#7A7A7A"/><circle cx="17.8" cy="13.9" r="0.4" fill="#333"/><circle cx="20.2" cy="13.9" r="0.4" fill="#333"/>` +
+          `<circle cx="18.2" cy="11.4" r="0.5" fill="#56D4DD"/><circle cx="19.4" cy="11.3" r="0.6" fill="#E8C547"/>`,
+      ]
+    case 'cowboy':
+      return [
+        `<circle cx="18" cy="-0.6" r="2" fill="#F2B84B"/><path d="M-2 12 H1 V8 H7 V12 H12 V9.6 H16 V12 H24 V15 H-2z" fill="#A0522D"/>`,
+        each([2, 15], x => `<rect x="${x}" y="8.4" width="1" height="5.6" rx="0.4" fill="#3E7A3E"/><rect x="${x - 1.2}" y="10" width="1.2" height="0.7" fill="#3E7A3E"/>` +
+          `<rect x="${x - 1.2}" y="8.8" width="0.6" height="1.6" rx="0.3" fill="#3E7A3E"/><rect x="${x + 1}" y="10.8" width="1" height="0.6" fill="#3E7A3E"/><rect x="${x + 1.5}" y="9.6" width="0.6" height="1.6" rx="0.3" fill="#3E7A3E"/>`),
+        `<g transform="translate(10 13.4)"><circle r="0.9" fill="none" stroke="#C9A36B" stroke-width="0.3"/><path d="M-0.6 -0.3 L0.5 0.4 M-0.3 0.6 L0.4 -0.6" stroke="#C9A36B" stroke-width="0.2"/></g>` +
+          `<rect x="20" y="13.8" width="1" height="0.6" fill="#F4F4F4"/><path d="M19.8 13.8 q-0.4 -0.6 -0.8 -0.4 M21.2 13.8 q0.4 -0.6 0.8 -0.4" stroke="#F4F4F4" stroke-width="0.2" fill="none"/>` +
+          each([1, 6, 15], x => `<rect x="${x}" y="14.4" width="0.5" height="0.3" fill="#8A6A44"/>`),
+      ]
+    case 'police':
+      return [
+        each([0, 1, 2, 3, 4, 5], i => {
+          const [x, w, h] = ([[-2, 4, 9], [2.5, 3, 12], [6, 5, 7], [11.5, 3.5, 13], [15.5, 4, 8], [20, 4, 11]] as const)[i]!
+          return `<rect x="${x}" y="${14 - h}" width="${w}" height="${h}" fill="#2A3550"/>` +
+            each([0, 1, 2], r => (r + i) % 2 ? `<rect x="${x + 0.8}" y="${15 - h + r * 2}" width="0.6" height="0.6" fill="#E8C547"/>` : '')
+        }),
+        each([4, 17], x => `<rect x="${x}" y="6" width="0.4" height="8" fill="#4A5060"/><rect x="${x}" y="6" width="1.6" height="0.4" fill="#4A5060"/>` +
+          `<rect x="${x + 1.2}" y="6.4" width="0.8" height="0.4" fill="#FFE9A8"/><circle cx="${x + 1.6}" cy="7.4" r="1.4" fill="#FFE9A8" opacity="0.3"/>`),
+        each([-1, 4, 9, 14, 19], x => `<rect x="${x}" y="14.5" width="2" height="0.3" fill="#DDD"/>`),
+      ]
+    case 'nurse':
+      return [
+        `<rect x="1" y="2" width="12" height="12" fill="#3A4A5A"/><rect x="5.6" y="3" width="2.8" height="2.8" fill="#F4F4F4"/>` +
+          `<rect x="6.6" y="3.3" width="0.8" height="2.2" fill="#E5534B"/><rect x="5.9" y="4" width="2.2" height="0.8" fill="#E5534B"/>` +
+          each([2, 4.4, 9.6, 12], x => `<rect x="${x - 0.6}" y="7" width="1" height="1" fill="#7FB2D8"/><rect x="${x - 0.6}" y="10" width="1" height="1" fill="#7FB2D8"/>`) +
+          `<rect x="16" y="6" width="7" height="8" fill="#34424F"/>`,
+        `<path d="M-2 4 H3 l0.6 -2 0.8 4 0.6 -3 0.5 1 H16 l0.6 -2 0.8 4 0.6 -3 0.5 1 H24" stroke="#57C27A" stroke-width="0.3" fill="none"/>`,
+        each([-2, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22], (x, i) => `<rect x="${x}" y="14" width="2" height="1" fill="${i % 2 ? '#3C4A50' : '#2E3A40'}"/>`),
+      ]
+    case 'biker':
+      return [
+        `<path d="M-2 12 L3 4 L7 9 L12 2 L17 8 L20 5 L24 12z" fill="#3A4660"/><path d="M11 3.4 L12 2 L13 3.4z M2.2 5.2 L3 4 L3.8 5.2z" fill="#DDE3EA"/>`,
+        each([5, 18], x => `<rect x="${x}" y="2" width="0.4" height="12" fill="#6B4A2E"/><rect x="${x - 1}" y="3" width="2.4" height="0.3" fill="#6B4A2E"/>`) +
+          `<path d="M5.2 3.2 Q11.6 5.4 18.2 3.2" stroke="#555" stroke-width="0.12" fill="none"/>` +
+          each([11, 22], x => `<path d="M${x} 13 l1.2 -3.6 l1.2 3.6z" fill="#2F5A3A"/>`),
+        each([-1, 5, 11, 17], x => `<rect x="${x}" y="14.4" width="2.6" height="0.3" fill="#E8C547"/>`),
+      ]
+    case 'worker':
+      return [
+        `<rect x="3" y="-2" width="1.2" height="16" fill="#B08A2A"/><rect x="-1" y="-2.8" width="18" height="0.7" fill="#B08A2A"/>` +
+          `<rect x="-1.4" y="-2.4" width="2" height="1.4" fill="#6A5A3A"/><line x1="13" y1="-2.1" x2="13" y2="3" stroke="#888" stroke-width="0.15"/>` +
+          `<path d="M12.6 3 h0.8 v0.6 q0 0.8 -0.6 0.8" stroke="#888" stroke-width="0.2" fill="none"/>` +
+          each([17, 19.5, 22], x => `<rect x="${x}" y="2" width="0.4" height="12" fill="#6A5A3A"/>`) + `<rect x="17" y="6" width="5.4" height="0.4" fill="#6A5A3A"/><rect x="17" y="10" width="5.4" height="0.4" fill="#6A5A3A"/>`,
+        `<rect x="7" y="12" width="5" height="2" fill="#8A3A2A"/><rect x="7.4" y="10.6" width="4.2" height="1.4" fill="#9A4A3A"/>` +
+          each([18, 20], x => `<circle cx="${x}" cy="13" r="1" fill="#666"/><circle cx="${x}" cy="13" r="0.5" fill="#333"/>`),
+        each([1, 12.4, 21], x => `<path d="M${x} 14.4 l0.9 -2.6 l0.9 2.6z" fill="#F08A24"/><rect x="${x + 0.4}" y="12.8" width="1" height="0.35" fill="#F4F4F4"/>`) +
+          each([-2, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22], (x, i) => `<rect x="${x}" y="14.6" width="2" height="0.4" fill="${i % 2 ? '#1E1E1E' : '#E8C547'}"/>`),
+      ]
+    case 'astronaut':
+      return [
+        ([[0, -2], [3, 4], [6, -3], [9, 1], [12, -1], [15, 6], [18, -3], [21, 3], [23, -1], [1, 9], [10, 7], [20, 10]] as const)
+          .map(([x, y]) => `<rect x="${x}" y="${y}" width="0.3" height="0.3" fill="#FFF6C8"/>`).join(''),
+        `<circle cx="18" cy="0" r="2.2" fill="#B07BE0"/><ellipse cx="18" cy="0" rx="3.6" ry="0.7" fill="none" stroke="#E0C8FF" stroke-width="0.3"/>` +
+          `<circle cx="5" cy="-1" r="0.9" fill="#BBB"/><circle cx="4.7" cy="-1.2" r="0.25" fill="#999"/>`,
+        `<path d="M9 12 l1 -0.8 1.2 0.4 0.4 1 -0.9 0.8 -1.3 -0.2z" fill="#7A7A7A"/><path d="M22 2 l0.8 -0.6 0.9 0.3 0.3 0.8 -0.7 0.6 -1 -0.2z" fill="#7A7A7A"/>` +
+          `<rect x="1" y="2.6" width="1.2" height="0.8" fill="#9AA3AD"/><rect x="-0.6" y="2.8" width="1.6" height="0.4" fill="#4F86E0"/><rect x="2.2" y="2.8" width="1.6" height="0.4" fill="#4F86E0"/>`,
+      ]
+    case 'detective':
+      return [
+        `<path d="M-2 14 V8 H2 V6.6 H2.8 V8 H6 V9 H9 V7 H9.8 V9 H13 V14z" fill="#2E3440"/>` +
+          `<rect x="15" y="-1" width="3" height="15" fill="#2E3440"/><path d="M15 -1 L16.5 -3.6 L18 -1z" fill="#2E3440"/><circle cx="16.5" cy="1.2" r="0.9" fill="#F2D27A"/>` +
+          `<rect x="19" y="7" width="5" height="7" fill="#2E3440"/>`,
+        each([3, 20], x => `<rect x="${x}" y="6" width="0.4" height="8" fill="#3A3A3A"/><rect x="${x - 0.4}" y="5" width="1.2" height="1.2" fill="#3A3A3A"/>` +
+          `<rect x="${x - 0.2}" y="5.2" width="0.8" height="0.8" fill="#F2D27A"/><circle cx="${x + 0.2}" cy="5.6" r="1.6" fill="#F2D27A" opacity="0.25"/>`),
+        each([2, 12, 21], x => `<ellipse cx="${x}" cy="13.2" rx="4" ry="0.9" fill="#DDE3EA" opacity="0.35"/>`),
+      ]
+    case 'writer':
+      return [
+        each([0, 5], y => `<rect x="-2" y="${y}" width="26" height="0.4" fill="#5A3A1E"/>` +
+          each([...Array(22).keys()], i => `<rect x="${-2 + i * 1.2}" y="${y - 3.4 + (i % 3) * 0.4}" width="0.9" height="${3.4 - (i % 3) * 0.4}" fill="${['#7E5BC8', '#E5534B', '#4F86E0', '#E8C547', '#5BB37F'][i % 5]}"/>`)),
+        each([6, 19], x => `<line x1="${x}" y1="-4" x2="${x}" y2="6.6" stroke="#888" stroke-width="0.12"/><path d="M${x - 1} 7.6 l0.5 -1 h1 l0.5 1z" fill="#E8C547"/>` +
+          `<circle cx="${x}" cy="8.2" r="1.4" fill="#FFE9A8" opacity="0.25"/>`),
+        each([3, 14, 21], (x, i) => `<rect x="${x}" y="${12 - i}" width="1.4" height="1.8" fill="#F4F4F4" transform="rotate(${i * 12 - 10} ${x} ${12 - i})"/>`),
+      ]
+    case 'teacher':
+      return [
+        `<rect x="0" y="-2.6" width="15" height="7" fill="#2F4F3A" stroke="#8A5A3C" stroke-width="0.5"/>` +
+          word(1, -0.2, 'a²+b²=c²', '#F4F4F4', 1.3) + word(1.6, 2.6, 'π≈3.14', '#F4F4F4', 1.2) + word(18, 1, 'ABC', '#E8C547', 1.6),
+        `<circle cx="21" cy="5.6" r="1.6" fill="#F4F4F4"/><g transform="translate(21 5.6)"><g>${spin('0;360', 6)}<rect x="-0.1" y="-1.2" width="0.2" height="1.2" fill="#1E1E24"/></g>` +
+          `<g>${spin('0;360', 36)}<rect x="-0.1" y="-0.8" width="0.2" height="0.8" fill="#E5534B"/></g></g>`,
+        `<rect x="1" y="12" width="7" height="0.6" fill="#8A5A3C"/><rect x="1.4" y="12.6" width="0.4" height="2" fill="#6B4A2E"/><rect x="7.2" y="12.6" width="0.4" height="2" fill="#6B4A2E"/>` +
+          `<circle cx="20" cy="13.4" r="0.8" fill="#E5534B"/><rect x="19.9" y="12.2" width="0.2" height="0.5" fill="#6B4A2E"/><path d="M20.1 12.4 q0.6 -0.4 0.8 0" fill="#5BB37F"/>`,
+      ]
+  }
+}
+
+function backdropSvg(c: Character, busy: boolean) {
+  const speeds = c === 'biker' ? [6, 2.4, 0.9] : c === 'astronaut' ? [60, 30, 12] : busy ? [16, 8, 3.2] : [32, 16, 6.4]
+  const opacity = [0.3, 0.45, 0.6]
+  return `<g class="parallax">` + sceneryOf(c).map((tile, i) =>
+    `<g opacity="${opacity[i]}"><g>${move('0 0;-26 0', speeds[i]!, ' calcMode="linear"')}${tile}<g transform="translate(26 0)">${tile}</g></g></g>`).join('') + `</g>`
+}
+
 
 // A commit pops a green stamp with confetti; a push launches an arrow. Each plays a few times, then hides.
 function eventSvg(kind: 'commit' | 'push') {
@@ -519,9 +832,10 @@ type AvatarOpts = { moving: boolean; event?: 'commit' | 'push'; activity?: Activ
 function avatarSvg(index: number, c: Character, sprites: Sprites, opts: AvatarOpts) {
   const live = opts.moving && sprites.motion
   const part = characterParts(c, live)
-  // While the agent works, its activity drives the moves; its own gear stays for thinking and idling.
   const act = live && opts.activity ? activityParts(opts.activity) : undefined
+  // While the agent works, it uses its own tool on the thing it is working on; its gear always stays on.
   const busy = live && opts.activity !== undefined && opts.activity !== 'thinking'
+  const use = busy && act ? useParts(c, act.target) : undefined
   const dark = '#2A1A14'
   const hatTop = 6 - part.hat.length
   const hat = pixels(part.hat, 3, hatTop, part.hatColours)
@@ -538,9 +852,10 @@ function avatarSvg(index: number, c: Character, sprites: Sprites, opts: AvatarOp
     ? `<animate attributeName="opacity" values="1;1;0;1;1;0;1" keyTimes="0;0.6;0.63;0.66;0.85;0.88;1" dur="${3.2 + (index % 3) * 0.5}s"${rep}/>`
     : ''
   const breathe = live ? move('0 0;0 0.35;0 0', 1.6, ` begin="${(index % 4) * 0.3}s"`) : ''
+  // The tool rides in the right hand, so it follows every arm move.
   const figure =
     `<g>${breathe}<g>${busy ? act?.body ?? '' : part.body}${body.B ?? ''}${body.V ?? ''}<g>${body.E ?? ''}${blink}${act?.eyes ?? ''}</g>${body.L ?? ''}` +
-    `<g>${act ? act.arm : part.arm}${body.R ?? ''}</g>${body.F ?? ''}${body.G ?? ''}${Object.values(hat).join('')}</g></g>`
+    `<g>${act ? act.arm : part.arm}${body.R ?? ''}${use ? use.tool : part.tool}</g>${body.F ?? ''}${body.G ?? ''}${Object.values(hat).join('')}</g></g>`
   const [first, second] = TRICKS[c]
   const tricks = live && !busy ? trickSvg(first, TRICK_WINDOWS[0]) + trickSvg(second, TRICK_WINDOWS[1]) : ''
   const airborne = (t: Trick) => t === 'jump' || t === 'doublejump'
@@ -555,9 +870,10 @@ function avatarSvg(index: number, c: Character, sprites: Sprites, opts: AvatarOp
       }).join('')
     : ''
   const shadow = `<ellipse cx="8" cy="13.6" rx="3" ry="0.5" fill="#000" opacity="0.35">${shadowShrink}</ellipse>`
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -4 22 19" shape-rendering="crispEdges">${shadow}` +
-    `<g>${tricks}${figure}${busy ? '' : part.props}</g>${act?.props ?? ''}${live ? gagsSvg(opts.elapsedMs ?? 0) : ''}` +
-    `${opts.event ? eventSvg(opts.event) : ''}</svg>`
+  const object = act ? `<g>${use?.react ?? ''}<g transform="translate(3 0)">${act.object}</g>${use?.hit ?? ''}</g>` : ''
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -4 26 19" shape-rendering="crispEdges">` +
+    `${live ? backdropSvg(c, busy) : ''}${shadow}${object}<g>${tricks}${figure}${part.gear}</g>${act?.under ?? ''}` +
+    `${live ? gagsSvg(opts.elapsedMs ?? 0) : ''}${opts.event ? eventSvg(opts.event) : ''}</svg>`
 }
 
 function barSvg(fraction: number, color: string) {
@@ -793,7 +1109,7 @@ export const register: Register = (on, options) => {
                   <Svg
                     source={avatarSvg(a.avatar, character, sprites, { moving, event: fresh, activity, elapsedMs: now - a.startedAt })}
                     alt={`agent avatar, ${character}, ${activity ?? 'done'}${label}`}
-                    width={52}
+                    width={62}
                     height={46}
                     isInteractive={(moving && sprites.motion) || fresh ? true : undefined}
                   />

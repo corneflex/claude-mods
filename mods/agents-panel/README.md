@@ -54,23 +54,26 @@ Each batch of agents launched from one prompt is a **run**, titled with that pro
 
 ![The ten characters](../../docs/screenshots/agents-panel-characters.png)
 
-*One frame of each character, rendered from the mod's own SVGs.*
+*Each character thinking in its own scenery, rendered from the mod's own SVGs.*
 
 Each agent is drawn as the character that suits its role, read from its agent type and description (the
 first match in this table wins):
 
-| Role words | Character | Look and signature move |
-|---|---|---|
-| explore, research, search, web… | detective | deerstalker hat and coat; tiptoes, puffing smoke rings from a pipe |
-| plan, architect, coordinate, design… | astronaut | helmet bubble and antenna; floats among twinkling stars |
-| review, check, audit, verify, security… | police | cap and badge; siren flashes, arm directs traffic |
-| test, QA, debug… | nurse | cap with a red cross; sways while hearts float up |
-| write, doc, book, author… | writer | purple beret and red scarf; a quill bobs behind its ear |
-| train, teach, tutor, guide, lab… | teacher | mortarboard with a swinging tassel; taps a pointer |
-| setup, config, deploy, ops… | cowboy | wide-brim hat; spins a lasso, wrangling servers |
-| fork, teammate, fast… | biker | helmet and visor; rides spinning wheels |
-| build, refactor, fix, implement… | worker | hard hat and hi-vis vest; jackhammer and dust |
-| dev, engineer, code, general… | digger | miner's helmet; swings a pickaxe, digging into code |
+| Role words | Character | Look | Tool | Scenery |
+|---|---|---|---|---|
+| explore, research, search, web… | detective | deerstalker, coat, pipe puffing smoke rings | magnifying glass | foggy London: clock tower, gas lamps |
+| plan, architect, coordinate, design… | astronaut | helmet bubble, antenna, jetpack | flag | stars, a ringed planet, asteroids, a satellite |
+| review, check, audit, verify, security… | police | cap, badge, flashing siren | pistol, twirled on a finger | city skyline, street lamps, road markings |
+| test, QA, debug… | nurse | cap with a red cross; hearts float up | syringe, squirting a test drop | hospital, a scrolling heart-monitor line |
+| write, doc, book, author… | writer | purple beret and red scarf | quill | library shelves, hanging lamps, loose pages |
+| train, teach, tutor, guide, lab… | teacher | mortarboard with a swinging tassel | pointer | chalkboard, a ticking clock, desks, an apple |
+| setup, config, deploy, ops… | cowboy | wide-brim hat, red bandana | lasso | desert mesas, cacti, a tumbleweed |
+| fork, teammate, fast… | biker | helmet and visor, spinning wheels | wrench | mountains, telephone poles, a fast road |
+| build, refactor, fix, implement… | worker | hard hat, hi-vis vest | jackhammer | crane, scaffolding, traffic cones |
+| dev, engineer, code, general… | digger | miner's helmet with a lamp beam | pickaxe | mine timbers, lanterns, rails, a cart of gems |
+
+The scenery scrolls behind the character in three layers at different speeds (parallax): faster while the
+agent uses a tool, slower while it thinks, very fast for the biker and barely drifting in space.
 
 An agent whose role matches nothing gets a character picked from its type, the same one every time. The
 `character` option can instead rotate through them or use one for every agent (see
@@ -78,20 +81,41 @@ An agent whose role matches nothing gets a character picked from its type, the s
 
 ## What the agent is doing
 
-![The activities, and the coffee of a long-running agent](../../docs/screenshots/agents-panel-activities.png)
-
 The sprite acts out the tool the agent is using. An activity stays on screen for 4 seconds after its tool ends,
 since most tool calls last milliseconds.
 
-| The agent is… | Tool | The sprite |
+| The agent is… | Tool | The sprite works on… |
 |---|---|---|
-| thinking | none (waiting on the model) | taps its chin under a thought bubble that goes `?`, `…`, then a lightbulb; does its two tricks |
-| reading | Read, Grep, Glob | sweeps a magnifying glass across a page, eyes following; a "?!" pops up |
-| writing | Edit, Write | scribbles lines with a pencil, tossing a crumpled draft over its shoulder |
-| running | Bash | hammers a keyboard while a little terminal scrolls `$ npm test`, `✓ 12 pass`… and smokes |
-| on the web | WebSearch, WebFetch | surfs a wave on a surfboard under a "www" sign |
-| delegating | Agent | throws paper airplanes |
-| using another tool | any other | fiddles with a turning gear |
+| thinking | none (waiting on the model) | nothing yet: taps its chin under a thought bubble that goes `?`, `…`, then a lightbulb, and does its two tricks |
+| reading | Read, Grep, Glob | a page, swept by a magnifying glass; a "?!" pops up |
+| writing | Edit, Write | a page it scribbles on, tossing a crumpled draft over its shoulder |
+| running | Bash | a little terminal scrolling `$ npm test`, `✓ 12 pass`…, hammering a keyboard |
+| on the web | WebSearch, WebFetch | a "www" sign, while surfing a wave |
+| delegating | Agent | paper airplanes it throws at the team |
+| using another tool | any other | a turning gear |
+
+While it works, each character also uses its own tool on that thing:
+
+![Each character using its tool on a page it reads](../../docs/screenshots/agents-panel-tools.png)
+
+*Every character reading a file, frozen at the moment its tool lands.*
+
+| Character | Does to the work |
+|---|---|
+| digger | swings the pickaxe into it: **TOK!**, rock chips fly and a crack appears |
+| cowboy | whirls the lasso, ropes it and yanks it over: **YEEHAW!** |
+| police | shoots it: muzzle flash, **BANG!**, a casing flies out and bullet holes pile up |
+| nurse | gives it a jab: it says **ouch!**, gets a plaster and heals with little green crosses |
+| biker | spins the wrench and revs: **VROOM!**, exhaust smoke, sparks, and the thing gets blown about |
+| worker | jackhammers it: **RATATA!**, dust clouds and spreading cracks |
+| astronaut | plants the flag in it: **MINE!**; it floats in zero gravity with stars circling it |
+| detective | inspects it: finds a fingerprint, **AHA!**, and the suspect trembles and sweats |
+| writer | flourishes the quill; ink flicks across and blots it |
+| teacher | taps it with the pointer: chalk dust, a gold star and an **A+** |
+
+![The activities, and the coffee of a long-running agent](../../docs/screenshots/agents-panel-activities.png)
+
+*One character per activity; the worker has been running for over three minutes, so it has a coffee.*
 
 | Event | The sprite |
 |---|---|
@@ -103,8 +127,8 @@ since most tool calls last milliseconds.
 
 When thinking, each character performs two tricks in a 6-second loop (jumps, double jumps, dances, shuffles,
 squats or stomps). Every character blinks and breathes, out of step with the others, and casts a shadow that
-shrinks while it is in the air. The characters never rotate or flip; only props such as the pickaxe, the gear
-and the wheels turn.
+shrinks while it is in the air. The characters never rotate or flip; only props such as the pickaxe, the gear,
+the wheels, the lasso and the pistol turn.
 
 ## Configuration
 
@@ -149,7 +173,7 @@ In testing, tokens, tool counts and durations matched Claude Code's own completi
 |---|---|
 | `hooks/register.tsx` | Hooks (agent spawn, model steps, tool calls, turn end), the pane, and the character SVGs. |
 | `types/index.d.ts` | The state contract (`agents`, `runs`, `collapsed`, `now`); each agent keeps its last tool and when it used it. |
-| `tests/pane.test.tsx` | Rows, totals, characters by role, activities from tool calls, the `character` option and the commit stamp. |
+| `tests/pane.test.tsx` | Rows, totals, characters by role, activities from tool calls, the `character` option, the commit stamp, and tools and scenery while busy. |
 
 ```bash
 claude plugin validate mods/agents-panel
@@ -165,6 +189,7 @@ The mod also registers a read-only tool, `mcp__agents-panel__state`, that return
 
 | Version | Changes |
 |---|---|
+| 0.6.0 | Characters keep their tool while they work and use it on what they work on (pickaxe, lasso, pistol, syringe, wrench, jackhammer, flag, magnifier, quill, pointer); three-layer parallax scenery for each character. |
 | 0.5.0 | Characters chosen by the agent's role (three new: detective, writer, teacher); sprites act out the tool in use; sweat and coffee for long runs. |
 | 0.4.2 | MIT licence. |
 | 0.4.1 | Characters move only in straight lines: no spinning or flipping. |
