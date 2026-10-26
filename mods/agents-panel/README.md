@@ -13,6 +13,7 @@ scenario, not a real run.*
 - [Installation](#installation)
 - [Usage](#usage)
 - [Characters](#characters)
+- [What the agent is doing](#what-the-agent-is-doing)
 - [Configuration](#configuration)
 - [How the numbers are measured](#how-the-numbers-are-measured)
 - [Surfaces](#surfaces)
@@ -51,38 +52,59 @@ Each batch of agents launched from one prompt is a **run**, titled with that pro
 
 ## Characters
 
-![The seven characters, with the commit and push stamps](../../docs/screenshots/agents-panel-characters.png)
+![The ten characters](../../docs/screenshots/agents-panel-characters.png)
 
 *One frame of each character, rendered from the mod's own SVGs.*
 
-Within a run, each agent gets the next character in this list. Each character has its own look and motion,
-and performs two tricks in a 6-second loop:
+Each agent is drawn as the character that suits its role, read from its agent type and description (the
+first match in this table wins):
 
-| Character | Look | Motion | Tricks |
-|---|---|---|---|
-| digger | miner's helmet with a lamp | lamp beam flickers, pickaxe swings, dirt flies | jump, dance |
-| cowboy | wide-brim hat | lasso spins overhead, rides at a bounce, waves | double jump, side shuffle |
-| police | cap and gold badge | red/blue siren flashes, arm directs traffic | dance, squat |
-| nurse | white cap with a red cross | sways while hearts float up | side shuffle, jump |
-| biker | helmet and visor | bounces on spinning wheels, speed lines stream past | jump, stomp |
-| worker | hard hat and hi-vis vest | jackhammer shakes the sprite, dust puffs | stomp, jump |
-| astronaut | helmet bubble and antenna | floats and drifts, antenna blinks, stars twinkle | double jump, squat |
+| Role words | Character | Look and signature move |
+|---|---|---|
+| explore, research, search, web… | detective | deerstalker hat and coat; tiptoes, puffing smoke rings from a pipe |
+| plan, architect, coordinate, design… | astronaut | helmet bubble and antenna; floats among twinkling stars |
+| review, check, audit, verify, security… | police | cap and badge; siren flashes, arm directs traffic |
+| test, QA, debug… | nurse | cap with a red cross; sways while hearts float up |
+| write, doc, book, author… | writer | purple beret and red scarf; a quill bobs behind its ear |
+| train, teach, tutor, guide, lab… | teacher | mortarboard with a swinging tassel; taps a pointer |
+| setup, config, deploy, ops… | cowboy | wide-brim hat; spins a lasso, wrangling servers |
+| fork, teammate, fast… | biker | helmet and visor; rides spinning wheels |
+| build, refactor, fix, implement… | worker | hard hat and hi-vis vest; jackhammer and dust |
+| dev, engineer, code, general… | digger | miner's helmet; swings a pickaxe, digging into code |
 
-Every character also blinks and breathes, out of step with the others, and casts a shadow that shrinks while
-it is in the air. The characters never rotate or flip; only props such as the pickaxe and the wheels turn.
+An agent whose role matches nothing gets a character picked from its type, the same one every time. The
+`character` option can instead rotate through them or use one for every agent (see
+[Configuration](#configuration)).
 
-![Mid-trick: jumping, shuffling and squatting, with thought bubbles](../../docs/screenshots/agents-panel-tricks.png)
+## What the agent is doing
 
-*One frame 1.5 seconds into the trick loop.*
+![The activities, and the coffee of a long-running agent](../../docs/screenshots/agents-panel-activities.png)
 
-The sprite also reacts to what the agent does:
+The sprite acts out the tool the agent is using. An activity stays on screen for 4 seconds after its tool ends,
+since most tool calls last milliseconds.
 
-| When the agent… | The sprite shows |
+| The agent is… | Tool | The sprite |
+|---|---|---|
+| thinking | none (waiting on the model) | taps its chin under a thought bubble that goes `?`, `…`, then a lightbulb; does its two tricks |
+| reading | Read, Grep, Glob | sweeps a magnifying glass across a page, eyes following; a "?!" pops up |
+| writing | Edit, Write | scribbles lines with a pencil, tossing a crumpled draft over its shoulder |
+| running | Bash | hammers a keyboard while a little terminal scrolls `$ npm test`, `✓ 12 pass`… and smokes |
+| on the web | WebSearch, WebFetch | surfs a wave on a surfboard under a "www" sign |
+| delegating | Agent | throws paper airplanes |
+| using another tool | any other | fiddles with a turning gear |
+
+| Event | The sprite |
 |---|---|
-| waits on the model, with no tool running | a thought bubble with bouncing dots |
-| runs `git commit` | a green ✓ stamp and falling confetti, three times |
-| runs `git push` | an arrow rocketing up, three times |
-| finishes | the character standing still |
+| `git commit` | a green ✓ stamp and falling confetti, three times |
+| `git push` | an arrow rocketing up, three times |
+| running for over a minute | a sweat drop |
+| running for over three minutes | a steaming coffee mug as well |
+| finished | the character standing still |
+
+When thinking, each character performs two tricks in a 6-second loop (jumps, double jumps, dances, shuffles,
+squats or stomps). Every character blinks and breathes, out of step with the others, and casts a shadow that
+shrinks while it is in the air. The characters never rotate or flip; only props such as the pickaxe, the gear
+and the wheels turn.
 
 ## Configuration
 
@@ -91,7 +113,7 @@ in `~/.claude/settings.json`.
 
 | Option | Default | Effect |
 |---|---|---|
-| `character` | `mixed` | `mixed` gives each agent in a run a different character. Name one (`digger`, `cowboy`, `police`, `nurse`, `biker`, `worker`, `astronaut`) to use it for every agent. |
+| `character` | `auto` | `auto` picks each agent's character from its role. `mixed` rotates through all ten within a run. A character's name (`digger`, `cowboy`, `police`, `nurse`, `biker`, `worker`, `astronaut`, `detective`, `writer`, `teacher`) uses it for every agent. |
 | `motion` | `true` | Animates the characters. The commit and push stamps play either way. |
 | `bodyColor` | `#E07F63` | Body colour, as hex. Any other value is ignored. |
 | `animateFinished` | `false` | Keeps characters moving after their agent finishes. |
@@ -126,8 +148,8 @@ In testing, tokens, tool counts and durations matched Claude Code's own completi
 | Path | Contents |
 |---|---|
 | `hooks/register.tsx` | Hooks (agent spawn, model steps, tool calls, turn end), the pane, and the character SVGs. |
-| `types/index.d.ts` | The state contract (`agents`, `runs`, `collapsed`, `now`). |
-| `tests/pane.test.tsx` | Rows, totals, characters per agent, the `character` option and the commit stamp. |
+| `types/index.d.ts` | The state contract (`agents`, `runs`, `collapsed`, `now`); each agent keeps its last tool and when it used it. |
+| `tests/pane.test.tsx` | Rows, totals, characters by role, activities from tool calls, the `character` option and the commit stamp. |
 
 ```bash
 claude plugin validate mods/agents-panel
@@ -143,6 +165,7 @@ The mod also registers a read-only tool, `mcp__agents-panel__state`, that return
 
 | Version | Changes |
 |---|---|
+| 0.5.0 | Characters chosen by the agent's role (three new: detective, writer, teacher); sprites act out the tool in use; sweat and coffee for long runs. |
 | 0.4.2 | MIT licence. |
 | 0.4.1 | Characters move only in straight lines: no spinning or flipping. |
 | 0.4.0 | Two tricks per character, blinking, breathing, shadows and the thinking bubble. |

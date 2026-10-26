@@ -16,6 +16,8 @@ export type AgentRow = {
   cost: number
   avatar: number
   event?: { kind: 'commit' | 'push'; at: number }
+  tool?: string
+  toolAt?: number
 }
 
 export type RunRow = { id: string; title: string; startedAt: number }

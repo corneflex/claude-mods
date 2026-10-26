@@ -1,6 +1,6 @@
 {
   "name": "agents-panel",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "A live Agents pane beside the chat: each subagent's model, effort, tokens, cost, time and progress, grouped by run.",
   "types": "./types/index.d.ts",
   "author": {
@@ -11,9 +11,10 @@
     "character": {
       "type": "string",
       "title": "Sprite character",
-      "description": "Which character each agent's sprite is: mixed gives each agent in a run a different one.",
-      "default": "mixed",
+      "description": "auto picks a character from each agent's role (explorer, planner, reviewer, tester, writer\u2026); mixed rotates through them; or name one for every agent.",
+      "default": "auto",
       "options": [
+        "auto",
         "mixed",
         "digger",
         "cowboy",
@@ -21,7 +22,10 @@
         "nurse",
         "biker",
         "worker",
-        "astronaut"
+        "astronaut",
+        "detective",
+        "writer",
+        "teacher"
       ]
     },
     "motion": {
