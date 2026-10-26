@@ -642,114 +642,93 @@ function useParts(c: Character, [tx, ty]: [number, number]): Use {
   }
 }
 
-// Three layers of scenery scroll behind the character at different speeds. Each tile covers the 26-unit canvas.
+// Things that pass behind the character, drawn facing left (the way they travel) from their bottom-left corner.
+const wheel = (cx: number, r = 0.6) =>
+  `<g transform="translate(${cx} ${-r})"><circle r="${r}" fill="#222"/><g>${spin('0;-360', 0.5)}<rect x="-0.08" y="${-r * 0.8}" width="0.16" height="${r * 1.6}" fill="#888"/></g></g>`
+const flap = (a: string, b: string, fill: string, dur = 0.3) =>
+  `<path d="${a}" fill="${fill}"><animate attributeName="d" values="${a};${b};${a}" dur="${dur}s"${rep}/></path>`
+const blinker = (x: number, y: number, a: string, b: string) =>
+  `<rect x="${x}" y="${y}" width="0.8" height="0.4" fill="${a}"><animate attributeName="fill" values="${a};${b}" dur="0.4s" calcMode="discrete"${rep}/></rect>`
+const MOVERS = {
+  rock: `<g>${spin('0 1.6 -1;-360 1.6 -1', 1.4)}<path d="M0 -0.2 l0.5 -1.4 1.3 -0.7 1.5 0.4 0.6 1.3 -0.6 0.8 -2.2 0z" fill="#7A7068"/><path d="M0.9 -1.5 l1 -0.3 0.6 0.3" stroke="#A09488" stroke-width="0.2" fill="none"/></g>`,
+  bat: flap('M0 0 q1 -1.2 2 0 q1 -1.2 2 0 l-2 0.6z', 'M0 0 q1 1 2 0 q1 1 2 0 l-2 0.6z', '#4A3A55', 0.25),
+  cart: `<path d="M0 -3 h4 l-0.5 2.2 h-3z" fill="#7A7A7A"/><circle cx="1.2" cy="-3.2" r="0.6" fill="#56D4DD"/><circle cx="2.4" cy="-3.3" r="0.7" fill="#E8C547"/><circle cx="3.2" cy="-3.1" r="0.5" fill="#E5534B"/>` + wheel(1, 0.5) + wheel(3, 0.5),
+  horse: (coat: string, rider: boolean) =>
+    `<g>${move('0 0;0 -0.4;0 0', 0.32)}<rect x="1" y="-3.4" width="4" height="1.6" rx="0.4" fill="${coat}"/><rect x="0.3" y="-4.8" width="1.1" height="1.8" fill="${coat}"/>` +
+    `<rect x="-0.7" y="-5.2" width="1.8" height="0.9" rx="0.3" fill="${coat}"/><rect x="0.6" y="-5.4" width="1.2" height="0.5" fill="#2A1A14"/><rect x="5" y="-3.3" width="1" height="0.5" fill="#2A1A14"/>` +
+    (rider ? `<rect x="2.2" y="-5.2" width="1.6" height="1.8" fill="#E07F63"/><rect x="1.8" y="-5.8" width="2.4" height="0.5" fill="#8A5A3C"/><rect x="2.3" y="-6.4" width="1.4" height="0.6" fill="#8A5A3C"/>` : '') + `</g>` +
+    `<g>${move('0 0;-0.5 -0.2;0.4 0;0 0', 0.32)}<rect x="1.2" y="-1.8" width="0.4" height="1.8" fill="${coat}"/><rect x="4.4" y="-1.8" width="0.4" height="1.8" fill="${coat}"/></g>` +
+    `<g>${move('0 0;0.5 -0.2;-0.4 0;0 0', 0.32)}<rect x="1.8" y="-1.8" width="0.4" height="1.8" fill="${coat}"/><rect x="3.8" y="-1.8" width="0.4" height="1.8" fill="${coat}"/></g>`,
+  tumbleweed: `<g>${spin('0 1 -1;-360 1 -1', 0.8)}<circle cx="1" cy="-1" r="1" fill="none" stroke="#C9A36B" stroke-width="0.3"/><path d="M0.3 -1.4 L1.7 -0.5 M0.5 -0.3 L1.5 -1.8" stroke="#C9A36B" stroke-width="0.2"/></g>`,
+  buzzard: flap('M0 0 q1.5 -1 3 0 q1.5 -1 3 0 l-3 0.5z', 'M0 0 q1.5 0.8 3 0 q1.5 0.8 3 0 l-3 0.5z', '#5A3A2A', 0.6),
+  policeCar: `<path d="M0 -1.2 v-1.2 h1.4 l1 -1 h2.6 l0.8 1 h1.4 v1.2z" fill="#F4F4F4"/><rect x="0" y="-2" width="7.2" height="0.6" fill="#2D3E7A"/>` +
+    blinker(2.6, -4, '#E5534B', '#4F86E0') + blinker(3.4, -4, '#4F86E0', '#E5534B') + `<rect x="2.6" y="-3.3" width="1" height="0.7" fill="#7FD1FF"/>` + wheel(1.6) + wheel(5.6),
+  robber: `<g>${move('0 0;0 -0.5;0 0', 0.3)}<rect x="0" y="-3.6" width="1.8" height="1.8" fill="#E07F63"/><rect x="0" y="-3.2" width="1.8" height="0.5" fill="#1E1E24"/>` +
+    `<rect x="0" y="-1.8" width="1.8" height="1" fill="#F4F4F4"/><rect x="0" y="-1.5" width="1.8" height="0.3" fill="#1E1E24"/>` +
+    `<circle cx="2.8" cy="-2.4" r="0.9" fill="#C9A36B"/>${word(2.35, -2, '$', '#3E7A3E', 1.1)}</g>` +
+    `<g>${move('0 0;0.4 0;-0.4 0;0 0', 0.3)}<rect x="0.2" y="-0.8" width="0.4" height="0.8" fill="#1E1E24"/><rect x="1.2" y="-0.8" width="0.4" height="0.8" fill="#1E1E24"/></g>`,
+  helicopter: (cross: boolean) =>
+    `<rect x="0.6" y="-2.6" width="3.6" height="1.8" rx="0.8" fill="${cross ? '#F4F4F4' : '#2D3E7A'}"/><rect x="4" y="-2" width="3" height="0.5" fill="${cross ? '#F4F4F4' : '#2D3E7A'}"/>` +
+    `<rect x="1" y="-2.3" width="1" height="0.8" fill="#7FD1FF"/>` + (cross ? `<rect x="2.6" y="-2.3" width="0.3" height="1.1" fill="#E5534B"/><rect x="2.2" y="-1.9" width="1.1" height="0.3" fill="#E5534B"/>` : '') +
+    `<rect x="2.3" y="-3.1" width="0.3" height="0.5" fill="#555"/><rect x="0" y="-3.3" width="5" height="0.25" fill="#999"><animate attributeName="width" values="5;0.6;5" dur="0.15s"${rep}/></rect>` +
+    `<rect x="1" y="-0.6" width="3" height="0.2" fill="#555"/>`,
+  ambulance: `<rect x="0" y="-3.6" width="7" height="2.6" rx="0.3" fill="#F4F4F4"/><rect x="0" y="-2" width="7" height="0.4" fill="#E5534B"/>` +
+    `<rect x="0.3" y="-3.2" width="1.2" height="1" fill="#7FD1FF"/><rect x="3.9" y="-3.3" width="0.4" height="1.2" fill="#E5534B"/><rect x="3.5" y="-2.9" width="1.2" height="0.4" fill="#E5534B"/>` +
+    blinker(1.8, -4, '#4F86E0', '#F4F4F4') + wheel(1.4) + wheel(5.6),
+  wheelchair: `<rect x="0.6" y="-2.6" width="1.6" height="0.4" fill="#4F86E0"/><rect x="2" y="-3.8" width="0.4" height="1.6" fill="#4F86E0"/>` +
+    `<rect x="0.8" y="-4" width="1.2" height="1.4" fill="#E07F63"/>` + wheel(1.8, 1) + wheel(0.2, 0.35),
+  car: (color: string) => `<path d="M0 -1 v-1.2 h1.2 l1.2 -1.2 h2.6 l1 1.2 h1.2 v1.2z" fill="${color}"/><rect x="2.6" y="-3" width="1.2" height="0.7" fill="#7FD1FF"/>` + wheel(1.5) + wheel(5.5),
+  truck: (color: string) => `<rect x="0" y="-3.6" width="2.4" height="2.6" fill="${color}"/><rect x="0.3" y="-3.3" width="1.3" height="1" fill="#7FD1FF"/>` +
+    `<rect x="2.5" y="-4.2" width="5.5" height="3.2" fill="#8A8A8A"/>` + wheel(1.2) + wheel(5) + wheel(6.6),
+  mixer: `<rect x="0" y="-3.4" width="2.2" height="2.4" fill="#F08A24"/><rect x="0.3" y="-3.1" width="1.2" height="0.9" fill="#7FD1FF"/>` +
+    `<g transform="translate(5 -2.8)"><ellipse rx="2.8" ry="1.6" fill="#DDD"/><g>${move('-1.6 0;1.6 0', 0.6)}<rect x="-0.3" y="-1.5" width="0.6" height="3" fill="#F08A24"/></g></g>` + wheel(1.2) + wheel(5.6),
+  rocket: `<path d="M0 -1.6 l1.8 -1 h4 v2 h-4z" fill="#F4F4F4"/><path d="M0 -1.6 l1.8 -1 v2z" fill="#E5534B"/><circle cx="3" cy="-1.6" r="0.45" fill="#7FD1FF"/>` +
+    `<path d="M4.6 -2.6 l1.6 -1 v1z M4.6 -0.6 l1.6 1 v-1z" fill="#E5534B"/>` +
+    `<path d="M5.8 -2.2 h1.8 l-0.6 0.6 0.6 0.6 h-1.8z" fill="#F2B84B"><animate attributeName="d" values="M5.8 -2.2 h1.8 l-0.6 0.6 0.6 0.6 h-1.8z;M5.8 -2.2 h2.8 l-1 0.6 1 0.6 h-2.8z;M5.8 -2.2 h1.8 l-0.6 0.6 0.6 0.6 h-1.8z" dur="0.2s"${rep}/></path>`,
+  ufo: `<ellipse cx="2.4" cy="-1.4" rx="2.4" ry="0.7" fill="#9AA3AD"/><ellipse cx="2.4" cy="-2" rx="1.1" ry="0.8" fill="#7FD1FF"/>` +
+    [0.8, 2.4, 4].map((x, i) => `<circle cx="${x}" cy="-1.3" r="0.25" fill="#E8C547">${fade('1;0.2;1', 0.6, ` begin="${i * 0.2}s"`)}</circle>`).join('') +
+    `<path d="M1.6 -0.8 h1.6 l1 3 h-3.6z" fill="#E8F99A" opacity="0.25">${fade('0;0.35;0', 1.6)}</path>`,
+  comet: `<path d="M1 -1 L6 -1.8 L6 -0.2z" fill="#7FD1FF" opacity="0.5"/><circle cx="1" cy="-1" r="0.8" fill="#FFF6C8"/>`,
+  carriage: `<rect x="5.8" y="-4.4" width="4" height="3" fill="#4A4A58"/><rect x="6.4" y="-3.9" width="1.2" height="1" fill="#F2D27A"/><rect x="5.6" y="-4.8" width="4.4" height="0.4" fill="#4A4A58"/>` +
+    `<rect x="4.4" y="-2.6" width="1.6" height="0.25" fill="#5A3A1E"/>` + wheel(8.6, 1),
+  cat: `<g>${move('0 0;0 -0.15;0 0', 0.5)}<rect x="0.6" y="-1.6" width="2.4" height="1" rx="0.3" fill="#4A4A58"/><rect x="0" y="-2.2" width="1.2" height="1" fill="#4A4A58"/>` +
+    `<path d="M0 -2.2 l0.2 -0.5 0.3 0.5z M0.8 -2.2 l0.2 -0.5 0.3 0.5z" fill="#4A4A58"/><rect x="0.2" y="-1.9" width="0.2" height="0.2" fill="#E8E04A"/><rect x="0.7" y="-1.9" width="0.2" height="0.2" fill="#E8E04A"/></g>` +
+    `<path d="M3 -1.2 q1 -0.2 1.2 -1.4" stroke="#4A4A58" stroke-width="0.3" fill="none"><animate attributeName="d" values="M3 -1.2 q1 -0.2 1.2 -1.4;M3 -1.2 q1 0.2 1.4 -0.8;M3 -1.2 q1 -0.2 1.2 -1.4" dur="0.8s"${rep}/></path>` +
+    `<g>${move('0 0;0.3 0;-0.3 0;0 0', 0.5)}<rect x="0.8" y="-0.6" width="0.3" height="0.6" fill="#4A4A58"/><rect x="2.5" y="-0.6" width="0.3" height="0.6" fill="#4A4A58"/></g>`,
+  crow: flap('M0 0 q1 -0.8 2 0 q1 -0.8 2 0 l-2 0.4z', 'M0 0 q1 0.8 2 0 q1 0.8 2 0 l-2 0.4z', '#4A4A58', 0.4),
+  bird: flap('M0 0 q0.8 -0.8 1.6 0 q0.8 -0.8 1.6 0', 'M0 0 q0.8 0.6 1.6 0 q0.8 0.6 1.6 0', 'none', 0.35).replace('fill="none"', 'fill="none" stroke="#DDE3EA" stroke-width="0.3"'),
+  plane: `<g>${move('0 0;0 -0.5;0 0', 1.2)}<path d="M0 -1.4 l3.4 -1 -1.2 1.8z M0 -1.4 l2.2 0.8" fill="#F4F4F4" stroke="#BBB" stroke-width="0.12"/></g>`,
+  book: (color: string) => `<g>${move('0 0;0 -0.6;0 0', 1)}<rect x="1" y="-1.6" width="0.2" height="1.4" fill="#F4F4F4"/>` +
+    flap('M1 -0.2 l-1.2 -0.4 v-1.4 l1.2 0.4z', 'M1 -0.2 l-1 -1 v-1.2 l1 -0.6z', color, 0.5) + flap('M1.2 -0.2 l1.2 -0.4 v-1.4 l-1.2 0.4z', 'M1.2 -0.2 l1 -1 v-1.2 l-1 -0.6z', color, 0.5) + `</g>`,
+  bus: `<rect x="0" y="-4" width="9" height="3" rx="0.4" fill="#F2B84B"/><rect x="0" y="-2" width="9" height="0.3" fill="#1E1E24"/>` +
+    [0.6, 2.4, 4.2, 6, 7.8].map(x => `<rect x="${x}" y="-3.6" width="1.2" height="1" fill="#7FD1FF"/>`).join('') + word(3, -1.25, 'SCHOOL', '#1E1E24', 0.7) + wheel(1.8) + wheel(7.2),
+  apple: `<g>${spin('0 0.8 -0.8;-360 0.8 -0.8', 1)}<circle cx="0.8" cy="-0.8" r="0.8" fill="#E5534B"/><rect x="0.7" y="-1.9" width="0.2" height="0.5" fill="#6B4A2E"/><path d="M0.9 -1.7 q0.5 -0.4 0.8 0" fill="#5BB37F"/></g>`,
+}
+const at = (x: number, y: number, s: number, svg: string) => `<g transform="translate(${x} ${y}) scale(${s})">${svg}</g>`
+
+// What passes behind each character, far to near: only moving things, no landscape.
 function sceneryOf(c: Character): [string, string, string] {
-  const each = (xs: number[], f: (x: number, i: number) => string) => xs.map(f).join('')
+  const M = MOVERS
   switch (c) {
-    case 'digger':
-      return [
-        `<path d="M-2 -4H24V-2.4L22 -1 20.5 -2.6 18 0.2 15.5 -2.2 13 -1.2 10.5 -3 8 -0.6 5.5 -2.4 3 -1 0.5 -2.8 -2 -1.2z" fill="#5A4636"/>` +
-          `<circle cx="4" cy="2" r="0.35" fill="#56D4DD"/><circle cx="15" cy="-0.4" r="0.35" fill="#E5534B"/><circle cx="21" cy="5" r="0.35" fill="#56D4DD"/>`,
-        each([3, 16], x => `<rect x="${x}" y="-2" width="0.8" height="16" fill="#7A5634"/><rect x="${x + 6}" y="-2" width="0.8" height="16" fill="#7A5634"/>` +
-          `<rect x="${x - 0.4}" y="-2.4" width="7.6" height="1" fill="#8A6A44"/><line x1="${x + 3.4}" y1="-1.4" x2="${x + 3.4}" y2="0" stroke="#999" stroke-width="0.15"/>` +
-          `<circle cx="${x + 3.4}" cy="0.4" r="0.5" fill="#FFD54F"/>`),
-        `<rect x="-2" y="14" width="26" height="0.35" fill="#9A9A9A"/>` + each([-2, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22], x => `<rect x="${x}" y="14.3" width="1" height="0.7" fill="#6B4A2E"/>`) +
-          `<path d="M17 11.6 h4 l-0.5 2.2 h-3z" fill="#7A7A7A"/><circle cx="17.8" cy="13.9" r="0.4" fill="#333"/><circle cx="20.2" cy="13.9" r="0.4" fill="#333"/>` +
-          `<circle cx="18.2" cy="11.4" r="0.5" fill="#56D4DD"/><circle cx="19.4" cy="11.3" r="0.6" fill="#E8C547"/>`,
-      ]
-    case 'cowboy':
-      return [
-        `<circle cx="18" cy="-0.6" r="2" fill="#F2B84B"/><path d="M-2 12 H1 V8 H7 V12 H12 V9.6 H16 V12 H24 V15 H-2z" fill="#A0522D"/>`,
-        each([2, 15], x => `<rect x="${x}" y="8.4" width="1" height="5.6" rx="0.4" fill="#3E7A3E"/><rect x="${x - 1.2}" y="10" width="1.2" height="0.7" fill="#3E7A3E"/>` +
-          `<rect x="${x - 1.2}" y="8.8" width="0.6" height="1.6" rx="0.3" fill="#3E7A3E"/><rect x="${x + 1}" y="10.8" width="1" height="0.6" fill="#3E7A3E"/><rect x="${x + 1.5}" y="9.6" width="0.6" height="1.6" rx="0.3" fill="#3E7A3E"/>`),
-        `<g transform="translate(10 13.4)"><circle r="0.9" fill="none" stroke="#C9A36B" stroke-width="0.3"/><path d="M-0.6 -0.3 L0.5 0.4 M-0.3 0.6 L0.4 -0.6" stroke="#C9A36B" stroke-width="0.2"/></g>` +
-          `<rect x="20" y="13.8" width="1" height="0.6" fill="#F4F4F4"/><path d="M19.8 13.8 q-0.4 -0.6 -0.8 -0.4 M21.2 13.8 q0.4 -0.6 0.8 -0.4" stroke="#F4F4F4" stroke-width="0.2" fill="none"/>` +
-          each([1, 6, 15], x => `<rect x="${x}" y="14.4" width="0.5" height="0.3" fill="#8A6A44"/>`),
-      ]
-    case 'police':
-      return [
-        each([0, 1, 2, 3, 4, 5], i => {
-          const [x, w, h] = ([[-2, 4, 9], [2.5, 3, 12], [6, 5, 7], [11.5, 3.5, 13], [15.5, 4, 8], [20, 4, 11]] as const)[i]!
-          return `<rect x="${x}" y="${14 - h}" width="${w}" height="${h}" fill="#2A3550"/>` +
-            each([0, 1, 2], r => (r + i) % 2 ? `<rect x="${x + 0.8}" y="${15 - h + r * 2}" width="0.6" height="0.6" fill="#E8C547"/>` : '')
-        }),
-        each([4, 17], x => `<rect x="${x}" y="6" width="0.4" height="8" fill="#4A5060"/><rect x="${x}" y="6" width="1.6" height="0.4" fill="#4A5060"/>` +
-          `<rect x="${x + 1.2}" y="6.4" width="0.8" height="0.4" fill="#FFE9A8"/><circle cx="${x + 1.6}" cy="7.4" r="1.4" fill="#FFE9A8" opacity="0.3"/>`),
-        each([-1, 4, 9, 14, 19], x => `<rect x="${x}" y="14.5" width="2" height="0.3" fill="#DDD"/>`),
-      ]
-    case 'nurse':
-      return [
-        `<rect x="1" y="2" width="12" height="12" fill="#3A4A5A"/><rect x="5.6" y="3" width="2.8" height="2.8" fill="#F4F4F4"/>` +
-          `<rect x="6.6" y="3.3" width="0.8" height="2.2" fill="#E5534B"/><rect x="5.9" y="4" width="2.2" height="0.8" fill="#E5534B"/>` +
-          each([2, 4.4, 9.6, 12], x => `<rect x="${x - 0.6}" y="7" width="1" height="1" fill="#7FB2D8"/><rect x="${x - 0.6}" y="10" width="1" height="1" fill="#7FB2D8"/>`) +
-          `<rect x="16" y="6" width="7" height="8" fill="#34424F"/>`,
-        `<path d="M-2 4 H3 l0.6 -2 0.8 4 0.6 -3 0.5 1 H16 l0.6 -2 0.8 4 0.6 -3 0.5 1 H24" stroke="#57C27A" stroke-width="0.3" fill="none"/>`,
-        each([-2, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22], (x, i) => `<rect x="${x}" y="14" width="2" height="1" fill="${i % 2 ? '#3C4A50' : '#2E3A40'}"/>`),
-      ]
-    case 'biker':
-      return [
-        `<path d="M-2 12 L3 4 L7 9 L12 2 L17 8 L20 5 L24 12z" fill="#3A4660"/><path d="M11 3.4 L12 2 L13 3.4z M2.2 5.2 L3 4 L3.8 5.2z" fill="#DDE3EA"/>`,
-        each([5, 18], x => `<rect x="${x}" y="2" width="0.4" height="12" fill="#6B4A2E"/><rect x="${x - 1}" y="3" width="2.4" height="0.3" fill="#6B4A2E"/>`) +
-          `<path d="M5.2 3.2 Q11.6 5.4 18.2 3.2" stroke="#555" stroke-width="0.12" fill="none"/>` +
-          each([11, 22], x => `<path d="M${x} 13 l1.2 -3.6 l1.2 3.6z" fill="#2F5A3A"/>`),
-        each([-1, 5, 11, 17], x => `<rect x="${x}" y="14.4" width="2.6" height="0.3" fill="#E8C547"/>`),
-      ]
-    case 'worker':
-      return [
-        `<rect x="3" y="-2" width="1.2" height="16" fill="#B08A2A"/><rect x="-1" y="-2.8" width="18" height="0.7" fill="#B08A2A"/>` +
-          `<rect x="-1.4" y="-2.4" width="2" height="1.4" fill="#6A5A3A"/><line x1="13" y1="-2.1" x2="13" y2="3" stroke="#888" stroke-width="0.15"/>` +
-          `<path d="M12.6 3 h0.8 v0.6 q0 0.8 -0.6 0.8" stroke="#888" stroke-width="0.2" fill="none"/>` +
-          each([17, 19.5, 22], x => `<rect x="${x}" y="2" width="0.4" height="12" fill="#6A5A3A"/>`) + `<rect x="17" y="6" width="5.4" height="0.4" fill="#6A5A3A"/><rect x="17" y="10" width="5.4" height="0.4" fill="#6A5A3A"/>`,
-        `<rect x="7" y="12" width="5" height="2" fill="#8A3A2A"/><rect x="7.4" y="10.6" width="4.2" height="1.4" fill="#9A4A3A"/>` +
-          each([18, 20], x => `<circle cx="${x}" cy="13" r="1" fill="#666"/><circle cx="${x}" cy="13" r="0.5" fill="#333"/>`),
-        each([1, 12.4, 21], x => `<path d="M${x} 14.4 l0.9 -2.6 l0.9 2.6z" fill="#F08A24"/><rect x="${x + 0.4}" y="12.8" width="1" height="0.35" fill="#F4F4F4"/>`) +
-          each([-2, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22], (x, i) => `<rect x="${x}" y="14.6" width="2" height="0.4" fill="${i % 2 ? '#1E1E1E' : '#E8C547'}"/>`),
-      ]
-    case 'astronaut':
-      return [
-        ([[0, -2], [3, 4], [6, -3], [9, 1], [12, -1], [15, 6], [18, -3], [21, 3], [23, -1], [1, 9], [10, 7], [20, 10]] as const)
-          .map(([x, y]) => `<rect x="${x}" y="${y}" width="0.3" height="0.3" fill="#FFF6C8"/>`).join(''),
-        `<circle cx="18" cy="0" r="2.2" fill="#B07BE0"/><ellipse cx="18" cy="0" rx="3.6" ry="0.7" fill="none" stroke="#E0C8FF" stroke-width="0.3"/>` +
-          `<circle cx="5" cy="-1" r="0.9" fill="#BBB"/><circle cx="4.7" cy="-1.2" r="0.25" fill="#999"/>`,
-        `<path d="M9 12 l1 -0.8 1.2 0.4 0.4 1 -0.9 0.8 -1.3 -0.2z" fill="#7A7A7A"/><path d="M22 2 l0.8 -0.6 0.9 0.3 0.3 0.8 -0.7 0.6 -1 -0.2z" fill="#7A7A7A"/>` +
-          `<rect x="1" y="2.6" width="1.2" height="0.8" fill="#9AA3AD"/><rect x="-0.6" y="2.8" width="1.6" height="0.4" fill="#4F86E0"/><rect x="2.2" y="2.8" width="1.6" height="0.4" fill="#4F86E0"/>`,
-      ]
-    case 'detective':
-      return [
-        `<path d="M-2 14 V8 H2 V6.6 H2.8 V8 H6 V9 H9 V7 H9.8 V9 H13 V14z" fill="#2E3440"/>` +
-          `<rect x="15" y="-1" width="3" height="15" fill="#2E3440"/><path d="M15 -1 L16.5 -3.6 L18 -1z" fill="#2E3440"/><circle cx="16.5" cy="1.2" r="0.9" fill="#F2D27A"/>` +
-          `<rect x="19" y="7" width="5" height="7" fill="#2E3440"/>`,
-        each([3, 20], x => `<rect x="${x}" y="6" width="0.4" height="8" fill="#3A3A3A"/><rect x="${x - 0.4}" y="5" width="1.2" height="1.2" fill="#3A3A3A"/>` +
-          `<rect x="${x - 0.2}" y="5.2" width="0.8" height="0.8" fill="#F2D27A"/><circle cx="${x + 0.2}" cy="5.6" r="1.6" fill="#F2D27A" opacity="0.25"/>`),
-        each([2, 12, 21], x => `<ellipse cx="${x}" cy="13.2" rx="4" ry="0.9" fill="#DDE3EA" opacity="0.35"/>`),
-      ]
-    case 'writer':
-      return [
-        each([0, 5], y => `<rect x="-2" y="${y}" width="26" height="0.4" fill="#5A3A1E"/>` +
-          each([...Array(22).keys()], i => `<rect x="${-2 + i * 1.2}" y="${y - 3.4 + (i % 3) * 0.4}" width="0.9" height="${3.4 - (i % 3) * 0.4}" fill="${['#7E5BC8', '#E5534B', '#4F86E0', '#E8C547', '#5BB37F'][i % 5]}"/>`)),
-        each([6, 19], x => `<line x1="${x}" y1="-4" x2="${x}" y2="6.6" stroke="#888" stroke-width="0.12"/><path d="M${x - 1} 7.6 l0.5 -1 h1 l0.5 1z" fill="#E8C547"/>` +
-          `<circle cx="${x}" cy="8.2" r="1.4" fill="#FFE9A8" opacity="0.25"/>`),
-        each([3, 14, 21], (x, i) => `<rect x="${x}" y="${12 - i}" width="1.4" height="1.8" fill="#F4F4F4" transform="rotate(${i * 12 - 10} ${x} ${12 - i})"/>`),
-      ]
-    case 'teacher':
-      return [
-        `<rect x="0" y="-2.6" width="15" height="7" fill="#2F4F3A" stroke="#8A5A3C" stroke-width="0.5"/>` +
-          word(1, -0.2, 'a²+b²=c²', '#F4F4F4', 1.3) + word(1.6, 2.6, 'π≈3.14', '#F4F4F4', 1.2) + word(18, 1, 'ABC', '#E8C547', 1.6),
-        `<circle cx="21" cy="5.6" r="1.6" fill="#F4F4F4"/><g transform="translate(21 5.6)"><g>${spin('0;360', 6)}<rect x="-0.1" y="-1.2" width="0.2" height="1.2" fill="#1E1E24"/></g>` +
-          `<g>${spin('0;360', 36)}<rect x="-0.1" y="-0.8" width="0.2" height="0.8" fill="#E5534B"/></g></g>`,
-        `<rect x="1" y="12" width="7" height="0.6" fill="#8A5A3C"/><rect x="1.4" y="12.6" width="0.4" height="2" fill="#6B4A2E"/><rect x="7.2" y="12.6" width="0.4" height="2" fill="#6B4A2E"/>` +
-          `<circle cx="20" cy="13.4" r="0.8" fill="#E5534B"/><rect x="19.9" y="12.2" width="0.2" height="0.5" fill="#6B4A2E"/><path d="M20.1 12.4 q0.6 -0.4 0.8 0" fill="#5BB37F"/>`,
-      ]
+    case 'digger': return [at(4, 0, 0.5, M.bat) + at(17, -1.6, 0.5, M.bat), at(14, 14, 0.7, M.cart), at(2, 14.6, 0.8, M.rock) + at(15, 14.6, 0.6, M.rock)]
+    case 'cowboy': return [at(6, -1, 0.4, M.buzzard), at(14, 13, 0.55, M.horse('#6B4A2E', false)) + at(1, 13, 0.55, M.horse('#C9A36B', false)), at(8, 14.6, 1, M.horse('#3A2A20', true)) + at(20, 14.6, 0.7, M.tumbleweed)]
+    case 'police': return [at(10, 0, 0.5, M.helicopter(false)), at(16, 13.6, 0.7, M.policeCar), at(3, 14.6, 0.9, M.robber)]
+    case 'nurse': return [at(12, 0, 0.5, M.helicopter(true)), at(14, 13.6, 0.8, M.ambulance), at(2, 14.6, 0.8, M.wheelchair)]
+    case 'biker': return [at(6, -1, 0.4, M.bird) + at(18, 1, 0.4, M.bird), at(14, 13.4, 0.6, M.truck('#4F86E0')), at(2, 14.6, 0.9, M.car('#E5534B'))]
+    case 'worker': return [at(4, 1, 0.5, M.truck('#F08A24')), at(15, 13.6, 0.7, M.mixer), at(2, 14.6, 0.9, M.truck('#E8C547'))]
+    case 'astronaut': return [at(2, 0, 0.5, M.ufo) + at(16, 4, 0.4, M.comet), at(14, 12, 0.8, M.rocket), at(4, 3, 0.7, M.comet) + at(20, 13, 0.6, M.rock)]
+    case 'detective': return [at(3, -1, 0.5, M.crow) + at(15, 1, 0.5, M.crow), at(12, 13.6, 0.6, M.horse('#5A5A68', false) + M.carriage), at(2, 14.6, 1, M.cat)]
+    case 'writer': return [at(4, -1, 0.5, M.bird) + at(17, 0, 0.5, M.bird), at(14, 4, 0.8, M.plane) + at(2, 2, 0.6, M.plane), at(20, 13, 1, M.book('#7E5BC8')) + at(6, 14, 0.8, M.book('#E5534B'))]
+    case 'teacher': return [at(4, 0, 0.6, M.plane) + at(18, -1, 0.5, M.plane), at(12, 13.6, 0.7, M.bus), at(3, 14.6, 1, M.apple)]
   }
 }
 
 function backdropSvg(c: Character, busy: boolean) {
-  const speeds = c === 'biker' ? [6, 2.4, 0.9] : c === 'astronaut' ? [60, 30, 12] : busy ? [16, 8, 3.2] : [32, 16, 6.4]
-  const opacity = [0.3, 0.45, 0.6]
+  const speeds = c === 'biker' ? [6, 2.4, 0.9] : c === 'astronaut' ? [40, 20, 9] : busy ? [16, 8, 3.2] : [32, 16, 6.4]
+  const opacity = [0.35, 0.55, 0.75]
   return `<g class="parallax">` + sceneryOf(c).map((tile, i) =>
     `<g opacity="${opacity[i]}"><g>${move('0 0;-26 0', speeds[i]!, ' calcMode="linear"')}${tile}<g transform="translate(26 0)">${tile}</g></g></g>`).join('') + `</g>`
 }
-
 
 // A commit pops a green stamp with confetti; a push launches an arrow. Each plays a few times, then hides.
 function eventSvg(kind: 'commit' | 'push') {

@@ -1,6 +1,6 @@
 {
   "name": "agents-panel",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "A live Agents pane beside the chat: each subagent's model, effort, tokens, cost, time and progress, grouped by run.",
   "types": "./types/index.d.ts",
   "author": {

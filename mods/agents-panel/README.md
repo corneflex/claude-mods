@@ -59,21 +59,22 @@ Each batch of agents launched from one prompt is a **run**, titled with that pro
 Each agent is drawn as the character that suits its role, read from its agent type and description (the
 first match in this table wins):
 
-| Role words | Character | Look | Tool | Scenery |
+| Role words | Character | Look | Tool | Passing by |
 |---|---|---|---|---|
-| explore, research, search, web… | detective | deerstalker, coat, pipe puffing smoke rings | magnifying glass | foggy London: clock tower, gas lamps |
-| plan, architect, coordinate, design… | astronaut | helmet bubble, antenna, jetpack | flag | stars, a ringed planet, asteroids, a satellite |
-| review, check, audit, verify, security… | police | cap, badge, flashing siren | pistol, twirled on a finger | city skyline, street lamps, road markings |
-| test, QA, debug… | nurse | cap with a red cross; hearts float up | syringe, squirting a test drop | hospital, a scrolling heart-monitor line |
-| write, doc, book, author… | writer | purple beret and red scarf | quill | library shelves, hanging lamps, loose pages |
-| train, teach, tutor, guide, lab… | teacher | mortarboard with a swinging tassel | pointer | chalkboard, a ticking clock, desks, an apple |
-| setup, config, deploy, ops… | cowboy | wide-brim hat, red bandana | lasso | desert mesas, cacti, a tumbleweed |
-| fork, teammate, fast… | biker | helmet and visor, spinning wheels | wrench | mountains, telephone poles, a fast road |
-| build, refactor, fix, implement… | worker | hard hat, hi-vis vest | jackhammer | crane, scaffolding, traffic cones |
-| dev, engineer, code, general… | digger | miner's helmet with a lamp beam | pickaxe | mine timbers, lanterns, rails, a cart of gems |
+| explore, research, search, web… | detective | deerstalker, coat, pipe puffing smoke rings | magnifying glass | crows, a horse-drawn cab, a prowling black cat |
+| plan, architect, coordinate, design… | astronaut | helmet bubble, antenna, jetpack | flag | a UFO, comets, a rocket, tumbling asteroids |
+| review, check, audit, verify, security… | police | cap, badge, flashing siren | pistol, twirled on a finger | a police helicopter, a squad car, a robber running off with the loot |
+| test, QA, debug… | nurse | cap with a red cross; hearts float up | syringe, squirting a test drop | a medical helicopter, an ambulance, a runaway wheelchair |
+| write, doc, book, author… | writer | purple beret and red scarf | quill | birds, paper planes, flapping books |
+| train, teach, tutor, guide, lab… | teacher | mortarboard with a swinging tassel | pointer | paper planes, a school bus, a rolling apple |
+| setup, config, deploy, ops… | cowboy | wide-brim hat, red bandana | lasso | a buzzard, wild horses, a rider at full gallop, a tumbleweed |
+| fork, teammate, fast… | biker | helmet and visor, spinning wheels | wrench | birds, a truck, a speeding car |
+| build, refactor, fix, implement… | worker | hard hat, hi-vis vest | jackhammer | dump trucks, a cement mixer |
+| dev, engineer, code, general… | digger | miner's helmet with a lamp beam | pickaxe | bats, a mine cart full of gems, rolling rocks |
 
-The scenery scrolls behind the character in three layers at different speeds (parallax): faster while the
-agent uses a tool, slower while it thinks, very fast for the biker and barely drifting in space.
+Behind the character, things pass by in three layers at different speeds (parallax): small and dim far
+away, bigger and faster up close. There is no painted landscape, only moving things. They go faster while the
+agent uses a tool, slower while it thinks, very fast for the biker and drift slowly in space.
 
 An agent whose role matches nothing gets a character picked from its type, the same one every time. The
 `character` option can instead rotate through them or use one for every agent (see
@@ -189,6 +190,7 @@ The mod also registers a read-only tool, `mcp__agents-panel__state`, that return
 
 | Version | Changes |
 |---|---|
+| 0.6.1 | The parallax shows only moving things (horses, an ambulance, a rocket, rolling rocks…), no landscape. |
 | 0.6.0 | Characters keep their tool while they work and use it on what they work on (pickaxe, lasso, pistol, syringe, wrench, jackhammer, flag, magnifier, quill, pointer); three-layer parallax scenery for each character. |
 | 0.5.0 | Characters chosen by the agent's role (three new: detective, writer, teacher); sprites act out the tool in use; sweat and coffee for long runs. |
 | 0.4.2 | MIT licence. |
