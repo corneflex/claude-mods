@@ -710,22 +710,22 @@ const at = (x: number, y: number, s: number, svg: string) => `<g transform="tran
 function sceneryOf(c: Character): [string, string, string] {
   const M = MOVERS
   switch (c) {
-    case 'digger': return [at(4, 0, 0.5, M.bat) + at(17, -1.6, 0.5, M.bat), at(14, 14, 0.7, M.cart), at(2, 14.6, 0.8, M.rock) + at(15, 14.6, 0.6, M.rock)]
-    case 'cowboy': return [at(6, -1, 0.4, M.buzzard), at(14, 13, 0.55, M.horse('#6B4A2E', false)) + at(1, 13, 0.55, M.horse('#C9A36B', false)), at(8, 14.6, 1, M.horse('#3A2A20', true)) + at(20, 14.6, 0.7, M.tumbleweed)]
-    case 'police': return [at(10, 0, 0.5, M.helicopter(false)), at(16, 13.6, 0.7, M.policeCar), at(3, 14.6, 0.9, M.robber)]
-    case 'nurse': return [at(12, 0, 0.5, M.helicopter(true)), at(14, 13.6, 0.8, M.ambulance), at(2, 14.6, 0.8, M.wheelchair)]
-    case 'biker': return [at(6, -1, 0.4, M.bird) + at(18, 1, 0.4, M.bird), at(14, 13.4, 0.6, M.truck('#4F86E0')), at(2, 14.6, 0.9, M.car('#E5534B'))]
-    case 'worker': return [at(4, 1, 0.5, M.truck('#F08A24')), at(15, 13.6, 0.7, M.mixer), at(2, 14.6, 0.9, M.truck('#E8C547'))]
-    case 'astronaut': return [at(2, 0, 0.5, M.ufo) + at(16, 4, 0.4, M.comet), at(14, 12, 0.8, M.rocket), at(4, 3, 0.7, M.comet) + at(20, 13, 0.6, M.rock)]
-    case 'detective': return [at(3, -1, 0.5, M.crow) + at(15, 1, 0.5, M.crow), at(12, 13.6, 0.6, M.horse('#5A5A68', false) + M.carriage), at(2, 14.6, 1, M.cat)]
-    case 'writer': return [at(4, -1, 0.5, M.bird) + at(17, 0, 0.5, M.bird), at(14, 4, 0.8, M.plane) + at(2, 2, 0.6, M.plane), at(20, 13, 1, M.book('#7E5BC8')) + at(6, 14, 0.8, M.book('#E5534B'))]
-    case 'teacher': return [at(4, 0, 0.6, M.plane) + at(18, -1, 0.5, M.plane), at(12, 13.6, 0.7, M.bus), at(3, 14.6, 1, M.apple)]
+    case 'digger': return [at(2, 6, 1.6, M.bat) + at(15, 3, 1.3, M.bat), at(12, 13, 1.6, M.cart), at(1, 15, 1.8, M.rock)]
+    case 'cowboy': return [at(4, 4, 1.4, M.buzzard), at(12, 12, 1.3, M.horse('#6B4A2E', false)), at(2, 15, 1.6, M.horse('#3A2A20', true)) + at(19, 15, 1.6, M.tumbleweed)]
+    case 'police': return [at(6, 6, 1.8, M.helicopter(false)), at(12, 13, 1.5, M.policeCar), at(1, 15, 1.7, M.robber)]
+    case 'nurse': return [at(8, 6, 1.8, M.helicopter(true)), at(10, 13, 1.6, M.ambulance), at(2, 15, 1.6, M.wheelchair)]
+    case 'biker': return [at(3, 4, 1.4, M.bird) + at(16, 6, 1.2, M.bird), at(10, 13, 1.4, M.truck('#4F86E0')), at(0, 15, 1.7, M.car('#E5534B'))]
+    case 'worker': return [at(10, 7, 1.6, M.truck('#F08A24')), at(2, 13, 1.5, M.mixer), at(12, 15, 1.6, M.truck('#E8C547'))]
+    case 'astronaut': return [at(2, 4, 1.8, M.ufo), at(10, 12, 1.7, M.rocket), at(2, 9, 1.6, M.comet) + at(18, 15, 1.5, M.rock)]
+    case 'detective': return [at(2, 4, 1.5, M.crow) + at(16, 6, 1.2, M.crow), at(8, 13, 1.3, M.horse('#5A5A68', false) + M.carriage), at(1, 15, 2, M.cat)]
+    case 'writer': return [at(3, 4, 1.5, M.bird) + at(16, 2, 1.2, M.bird), at(10, 8, 1.8, M.plane), at(18, 14, 2, M.book('#7E5BC8')) + at(4, 15, 1.6, M.book('#E5534B'))]
+    case 'teacher': return [at(2, 5, 1.8, M.plane) + at(16, 2, 1.4, M.plane), at(6, 13, 1.3, M.bus), at(1, 15, 1.8, M.apple)]
   }
 }
 
 function backdropSvg(c: Character, busy: boolean) {
   const speeds = c === 'biker' ? [6, 2.4, 0.9] : c === 'astronaut' ? [40, 20, 9] : busy ? [16, 8, 3.2] : [32, 16, 6.4]
-  const opacity = [0.35, 0.55, 0.75]
+  const opacity = [0.25, 0.4, 0.55]
   return `<g class="parallax">` + sceneryOf(c).map((tile, i) =>
     `<g opacity="${opacity[i]}"><g>${move('0 0;-26 0', speeds[i]!, ' calcMode="linear"')}${tile}<g transform="translate(26 0)">${tile}</g></g></g>`).join('') + `</g>`
 }

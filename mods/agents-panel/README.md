@@ -72,8 +72,8 @@ first match in this table wins):
 | build, refactor, fix, implement… | worker | hard hat, hi-vis vest | jackhammer | dump trucks, a cement mixer |
 | dev, engineer, code, general… | digger | miner's helmet with a lamp beam | pickaxe | bats, a mine cart full of gems, rolling rocks |
 
-Behind the character, things pass by in three layers at different speeds (parallax): small and dim far
-away, bigger and faster up close. There is no painted landscape, only moving things. They go faster while the
+Behind the character, big dimmed shapes pass by in three layers at different speeds (parallax): the
+furthest are faintest and slowest, the nearest clearest and fastest. There is no painted landscape, only moving things. They go faster while the
 agent uses a tool, slower while it thinks, very fast for the biker and drift slowly in space.
 
 An agent whose role matches nothing gets a character picked from its type, the same one every time. The
@@ -190,6 +190,7 @@ The mod also registers a read-only tool, `mcp__agents-panel__state`, that return
 
 | Version | Changes |
 |---|---|
+| 0.6.2 | The passing things are drawn large across the background. |
 | 0.6.1 | The parallax shows only moving things (horses, an ambulance, a rocket, rolling rocks…), no landscape. |
 | 0.6.0 | Characters keep their tool while they work and use it on what they work on (pickaxe, lasso, pistol, syringe, wrench, jackhammer, flag, magnifier, quill, pointer); three-layer parallax scenery for each character. |
 | 0.5.0 | Characters chosen by the agent's role (three new: detective, writer, teacher); sprites act out the tool in use; sweat and coffee for long runs. |
