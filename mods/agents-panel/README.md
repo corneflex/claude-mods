@@ -54,27 +54,23 @@ Each batch of agents launched from one prompt is a **run**, titled with that pro
 
 ![The ten characters](../../docs/screenshots/agents-panel-characters.png)
 
-*Each character thinking in its own scenery, rendered from the mod's own SVGs.*
+*Each character thinking, rendered from the mod's own SVGs.*
 
 Each agent is drawn as the character that suits its role, read from its agent type and description (the
 first match in this table wins):
 
-| Role words | Character | Look | Tool | Passing by |
-|---|---|---|---|---|
-| explore, research, search, web… | detective | deerstalker, coat, pipe puffing smoke rings | magnifying glass | crows, a horse-drawn cab, a prowling black cat |
-| plan, architect, coordinate, design… | astronaut | helmet bubble, antenna, jetpack | flag | a UFO, comets, a rocket, tumbling asteroids |
-| review, check, audit, verify, security… | police | cap, badge, flashing siren | pistol, twirled on a finger | a police helicopter, a squad car, a robber running off with the loot |
-| test, QA, debug… | nurse | cap with a red cross; hearts float up | syringe, squirting a test drop | a medical helicopter, an ambulance, a runaway wheelchair |
-| write, doc, book, author… | writer | purple beret and red scarf | quill | birds, paper planes, flapping books |
-| train, teach, tutor, guide, lab… | teacher | mortarboard with a swinging tassel | pointer | paper planes, a school bus, a rolling apple |
-| setup, config, deploy, ops… | cowboy | wide-brim hat, red bandana | lasso | a buzzard, wild horses, a rider at full gallop, a tumbleweed |
-| fork, teammate, fast… | biker | helmet and visor, spinning wheels | wrench | birds, a truck, a speeding car |
-| build, refactor, fix, implement… | worker | hard hat, hi-vis vest | jackhammer | dump trucks, a cement mixer |
-| dev, engineer, code, general… | digger | miner's helmet with a lamp beam | pickaxe | bats, a mine cart full of gems, rolling rocks |
-
-Behind the character, big dimmed shapes pass by in three layers at different speeds (parallax): the
-furthest are faintest and slowest, the nearest clearest and fastest. There is no painted landscape, only moving things. They go faster while the
-agent uses a tool, slower while it thinks, very fast for the biker and drift slowly in space.
+| Role words | Character | Look | Tool |
+|---|---|---|---|
+| explore, research, search, web… | detective | deerstalker, coat, pipe puffing smoke rings | magnifying glass |
+| plan, architect, coordinate, design… | astronaut | helmet bubble, antenna, jetpack | flag |
+| review, check, audit, verify, security… | police | cap, badge, flashing siren | pistol, twirled on a finger |
+| test, QA, debug… | nurse | cap with a red cross; hearts float up | syringe, squirting a test drop |
+| write, doc, book, author… | writer | purple beret and red scarf | quill |
+| train, teach, tutor, guide, lab… | teacher | mortarboard with a swinging tassel | pointer |
+| setup, config, deploy, ops… | cowboy | wide-brim hat, red bandana | lasso |
+| fork, teammate, fast… | biker | helmet and visor, spinning wheels | wrench |
+| build, refactor, fix, implement… | worker | hard hat, hi-vis vest | jackhammer |
+| dev, engineer, code, general… | digger | miner's helmet with a lamp beam | pickaxe |
 
 An agent whose role matches nothing gets a character picked from its type, the same one every time. The
 `character` option can instead rotate through them or use one for every agent (see
@@ -174,7 +170,7 @@ In testing, tokens, tool counts and durations matched Claude Code's own completi
 |---|---|
 | `hooks/register.tsx` | Hooks (agent spawn, model steps, tool calls, turn end), the pane, and the character SVGs. |
 | `types/index.d.ts` | The state contract (`agents`, `runs`, `collapsed`, `now`); each agent keeps its last tool and when it used it. |
-| `tests/pane.test.tsx` | Rows, totals, characters by role, activities from tool calls, the `character` option, the commit stamp, and tools and scenery while busy. |
+| `tests/pane.test.tsx` | Rows, totals, characters by role, activities from tool calls, the `character` option, the commit stamp, and tools while busy. |
 
 ```bash
 claude plugin validate mods/agents-panel
@@ -190,6 +186,7 @@ The mod also registers a read-only tool, `mcp__agents-panel__state`, that return
 
 | Version | Changes |
 |---|---|
+| 0.7.0 | No background animation: just the character, its tool and the gag. |
 | 0.6.2 | The passing things are drawn large across the background. |
 | 0.6.1 | The parallax shows only moving things (horses, an ambulance, a rocket, rolling rocks…), no landscape. |
 | 0.6.0 | Characters keep their tool while they work and use it on what they work on (pickaxe, lasso, pistol, syringe, wrench, jackhammer, flag, magnifier, quill, pointer); three-layer parallax scenery for each character. |

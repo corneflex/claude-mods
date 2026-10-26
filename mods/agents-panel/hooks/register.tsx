@@ -642,94 +642,6 @@ function useParts(c: Character, [tx, ty]: [number, number]): Use {
   }
 }
 
-// Things that pass behind the character, drawn facing left (the way they travel) from their bottom-left corner.
-const wheel = (cx: number, r = 0.6) =>
-  `<g transform="translate(${cx} ${-r})"><circle r="${r}" fill="#222"/><g>${spin('0;-360', 0.5)}<rect x="-0.08" y="${-r * 0.8}" width="0.16" height="${r * 1.6}" fill="#888"/></g></g>`
-const flap = (a: string, b: string, fill: string, dur = 0.3) =>
-  `<path d="${a}" fill="${fill}"><animate attributeName="d" values="${a};${b};${a}" dur="${dur}s"${rep}/></path>`
-const blinker = (x: number, y: number, a: string, b: string) =>
-  `<rect x="${x}" y="${y}" width="0.8" height="0.4" fill="${a}"><animate attributeName="fill" values="${a};${b}" dur="0.4s" calcMode="discrete"${rep}/></rect>`
-const MOVERS = {
-  rock: `<g>${spin('0 1.6 -1;-360 1.6 -1', 1.4)}<path d="M0 -0.2 l0.5 -1.4 1.3 -0.7 1.5 0.4 0.6 1.3 -0.6 0.8 -2.2 0z" fill="#7A7068"/><path d="M0.9 -1.5 l1 -0.3 0.6 0.3" stroke="#A09488" stroke-width="0.2" fill="none"/></g>`,
-  bat: flap('M0 0 q1 -1.2 2 0 q1 -1.2 2 0 l-2 0.6z', 'M0 0 q1 1 2 0 q1 1 2 0 l-2 0.6z', '#4A3A55', 0.25),
-  cart: `<path d="M0 -3 h4 l-0.5 2.2 h-3z" fill="#7A7A7A"/><circle cx="1.2" cy="-3.2" r="0.6" fill="#56D4DD"/><circle cx="2.4" cy="-3.3" r="0.7" fill="#E8C547"/><circle cx="3.2" cy="-3.1" r="0.5" fill="#E5534B"/>` + wheel(1, 0.5) + wheel(3, 0.5),
-  horse: (coat: string, rider: boolean) =>
-    `<g>${move('0 0;0 -0.4;0 0', 0.32)}<rect x="1" y="-3.4" width="4" height="1.6" rx="0.4" fill="${coat}"/><rect x="0.3" y="-4.8" width="1.1" height="1.8" fill="${coat}"/>` +
-    `<rect x="-0.7" y="-5.2" width="1.8" height="0.9" rx="0.3" fill="${coat}"/><rect x="0.6" y="-5.4" width="1.2" height="0.5" fill="#2A1A14"/><rect x="5" y="-3.3" width="1" height="0.5" fill="#2A1A14"/>` +
-    (rider ? `<rect x="2.2" y="-5.2" width="1.6" height="1.8" fill="#E07F63"/><rect x="1.8" y="-5.8" width="2.4" height="0.5" fill="#8A5A3C"/><rect x="2.3" y="-6.4" width="1.4" height="0.6" fill="#8A5A3C"/>` : '') + `</g>` +
-    `<g>${move('0 0;-0.5 -0.2;0.4 0;0 0', 0.32)}<rect x="1.2" y="-1.8" width="0.4" height="1.8" fill="${coat}"/><rect x="4.4" y="-1.8" width="0.4" height="1.8" fill="${coat}"/></g>` +
-    `<g>${move('0 0;0.5 -0.2;-0.4 0;0 0', 0.32)}<rect x="1.8" y="-1.8" width="0.4" height="1.8" fill="${coat}"/><rect x="3.8" y="-1.8" width="0.4" height="1.8" fill="${coat}"/></g>`,
-  tumbleweed: `<g>${spin('0 1 -1;-360 1 -1', 0.8)}<circle cx="1" cy="-1" r="1" fill="none" stroke="#C9A36B" stroke-width="0.3"/><path d="M0.3 -1.4 L1.7 -0.5 M0.5 -0.3 L1.5 -1.8" stroke="#C9A36B" stroke-width="0.2"/></g>`,
-  buzzard: flap('M0 0 q1.5 -1 3 0 q1.5 -1 3 0 l-3 0.5z', 'M0 0 q1.5 0.8 3 0 q1.5 0.8 3 0 l-3 0.5z', '#5A3A2A', 0.6),
-  policeCar: `<path d="M0 -1.2 v-1.2 h1.4 l1 -1 h2.6 l0.8 1 h1.4 v1.2z" fill="#F4F4F4"/><rect x="0" y="-2" width="7.2" height="0.6" fill="#2D3E7A"/>` +
-    blinker(2.6, -4, '#E5534B', '#4F86E0') + blinker(3.4, -4, '#4F86E0', '#E5534B') + `<rect x="2.6" y="-3.3" width="1" height="0.7" fill="#7FD1FF"/>` + wheel(1.6) + wheel(5.6),
-  robber: `<g>${move('0 0;0 -0.5;0 0', 0.3)}<rect x="0" y="-3.6" width="1.8" height="1.8" fill="#E07F63"/><rect x="0" y="-3.2" width="1.8" height="0.5" fill="#1E1E24"/>` +
-    `<rect x="0" y="-1.8" width="1.8" height="1" fill="#F4F4F4"/><rect x="0" y="-1.5" width="1.8" height="0.3" fill="#1E1E24"/>` +
-    `<circle cx="2.8" cy="-2.4" r="0.9" fill="#C9A36B"/>${word(2.35, -2, '$', '#3E7A3E', 1.1)}</g>` +
-    `<g>${move('0 0;0.4 0;-0.4 0;0 0', 0.3)}<rect x="0.2" y="-0.8" width="0.4" height="0.8" fill="#1E1E24"/><rect x="1.2" y="-0.8" width="0.4" height="0.8" fill="#1E1E24"/></g>`,
-  helicopter: (cross: boolean) =>
-    `<rect x="0.6" y="-2.6" width="3.6" height="1.8" rx="0.8" fill="${cross ? '#F4F4F4' : '#2D3E7A'}"/><rect x="4" y="-2" width="3" height="0.5" fill="${cross ? '#F4F4F4' : '#2D3E7A'}"/>` +
-    `<rect x="1" y="-2.3" width="1" height="0.8" fill="#7FD1FF"/>` + (cross ? `<rect x="2.6" y="-2.3" width="0.3" height="1.1" fill="#E5534B"/><rect x="2.2" y="-1.9" width="1.1" height="0.3" fill="#E5534B"/>` : '') +
-    `<rect x="2.3" y="-3.1" width="0.3" height="0.5" fill="#555"/><rect x="0" y="-3.3" width="5" height="0.25" fill="#999"><animate attributeName="width" values="5;0.6;5" dur="0.15s"${rep}/></rect>` +
-    `<rect x="1" y="-0.6" width="3" height="0.2" fill="#555"/>`,
-  ambulance: `<rect x="0" y="-3.6" width="7" height="2.6" rx="0.3" fill="#F4F4F4"/><rect x="0" y="-2" width="7" height="0.4" fill="#E5534B"/>` +
-    `<rect x="0.3" y="-3.2" width="1.2" height="1" fill="#7FD1FF"/><rect x="3.9" y="-3.3" width="0.4" height="1.2" fill="#E5534B"/><rect x="3.5" y="-2.9" width="1.2" height="0.4" fill="#E5534B"/>` +
-    blinker(1.8, -4, '#4F86E0', '#F4F4F4') + wheel(1.4) + wheel(5.6),
-  wheelchair: `<rect x="0.6" y="-2.6" width="1.6" height="0.4" fill="#4F86E0"/><rect x="2" y="-3.8" width="0.4" height="1.6" fill="#4F86E0"/>` +
-    `<rect x="0.8" y="-4" width="1.2" height="1.4" fill="#E07F63"/>` + wheel(1.8, 1) + wheel(0.2, 0.35),
-  car: (color: string) => `<path d="M0 -1 v-1.2 h1.2 l1.2 -1.2 h2.6 l1 1.2 h1.2 v1.2z" fill="${color}"/><rect x="2.6" y="-3" width="1.2" height="0.7" fill="#7FD1FF"/>` + wheel(1.5) + wheel(5.5),
-  truck: (color: string) => `<rect x="0" y="-3.6" width="2.4" height="2.6" fill="${color}"/><rect x="0.3" y="-3.3" width="1.3" height="1" fill="#7FD1FF"/>` +
-    `<rect x="2.5" y="-4.2" width="5.5" height="3.2" fill="#8A8A8A"/>` + wheel(1.2) + wheel(5) + wheel(6.6),
-  mixer: `<rect x="0" y="-3.4" width="2.2" height="2.4" fill="#F08A24"/><rect x="0.3" y="-3.1" width="1.2" height="0.9" fill="#7FD1FF"/>` +
-    `<g transform="translate(5 -2.8)"><ellipse rx="2.8" ry="1.6" fill="#DDD"/><g>${move('-1.6 0;1.6 0', 0.6)}<rect x="-0.3" y="-1.5" width="0.6" height="3" fill="#F08A24"/></g></g>` + wheel(1.2) + wheel(5.6),
-  rocket: `<path d="M0 -1.6 l1.8 -1 h4 v2 h-4z" fill="#F4F4F4"/><path d="M0 -1.6 l1.8 -1 v2z" fill="#E5534B"/><circle cx="3" cy="-1.6" r="0.45" fill="#7FD1FF"/>` +
-    `<path d="M4.6 -2.6 l1.6 -1 v1z M4.6 -0.6 l1.6 1 v-1z" fill="#E5534B"/>` +
-    `<path d="M5.8 -2.2 h1.8 l-0.6 0.6 0.6 0.6 h-1.8z" fill="#F2B84B"><animate attributeName="d" values="M5.8 -2.2 h1.8 l-0.6 0.6 0.6 0.6 h-1.8z;M5.8 -2.2 h2.8 l-1 0.6 1 0.6 h-2.8z;M5.8 -2.2 h1.8 l-0.6 0.6 0.6 0.6 h-1.8z" dur="0.2s"${rep}/></path>`,
-  ufo: `<ellipse cx="2.4" cy="-1.4" rx="2.4" ry="0.7" fill="#9AA3AD"/><ellipse cx="2.4" cy="-2" rx="1.1" ry="0.8" fill="#7FD1FF"/>` +
-    [0.8, 2.4, 4].map((x, i) => `<circle cx="${x}" cy="-1.3" r="0.25" fill="#E8C547">${fade('1;0.2;1', 0.6, ` begin="${i * 0.2}s"`)}</circle>`).join('') +
-    `<path d="M1.6 -0.8 h1.6 l1 3 h-3.6z" fill="#E8F99A" opacity="0.25">${fade('0;0.35;0', 1.6)}</path>`,
-  comet: `<path d="M1 -1 L6 -1.8 L6 -0.2z" fill="#7FD1FF" opacity="0.5"/><circle cx="1" cy="-1" r="0.8" fill="#FFF6C8"/>`,
-  carriage: `<rect x="5.8" y="-4.4" width="4" height="3" fill="#4A4A58"/><rect x="6.4" y="-3.9" width="1.2" height="1" fill="#F2D27A"/><rect x="5.6" y="-4.8" width="4.4" height="0.4" fill="#4A4A58"/>` +
-    `<rect x="4.4" y="-2.6" width="1.6" height="0.25" fill="#5A3A1E"/>` + wheel(8.6, 1),
-  cat: `<g>${move('0 0;0 -0.15;0 0', 0.5)}<rect x="0.6" y="-1.6" width="2.4" height="1" rx="0.3" fill="#4A4A58"/><rect x="0" y="-2.2" width="1.2" height="1" fill="#4A4A58"/>` +
-    `<path d="M0 -2.2 l0.2 -0.5 0.3 0.5z M0.8 -2.2 l0.2 -0.5 0.3 0.5z" fill="#4A4A58"/><rect x="0.2" y="-1.9" width="0.2" height="0.2" fill="#E8E04A"/><rect x="0.7" y="-1.9" width="0.2" height="0.2" fill="#E8E04A"/></g>` +
-    `<path d="M3 -1.2 q1 -0.2 1.2 -1.4" stroke="#4A4A58" stroke-width="0.3" fill="none"><animate attributeName="d" values="M3 -1.2 q1 -0.2 1.2 -1.4;M3 -1.2 q1 0.2 1.4 -0.8;M3 -1.2 q1 -0.2 1.2 -1.4" dur="0.8s"${rep}/></path>` +
-    `<g>${move('0 0;0.3 0;-0.3 0;0 0', 0.5)}<rect x="0.8" y="-0.6" width="0.3" height="0.6" fill="#4A4A58"/><rect x="2.5" y="-0.6" width="0.3" height="0.6" fill="#4A4A58"/></g>`,
-  crow: flap('M0 0 q1 -0.8 2 0 q1 -0.8 2 0 l-2 0.4z', 'M0 0 q1 0.8 2 0 q1 0.8 2 0 l-2 0.4z', '#4A4A58', 0.4),
-  bird: flap('M0 0 q0.8 -0.8 1.6 0 q0.8 -0.8 1.6 0', 'M0 0 q0.8 0.6 1.6 0 q0.8 0.6 1.6 0', 'none', 0.35).replace('fill="none"', 'fill="none" stroke="#DDE3EA" stroke-width="0.3"'),
-  plane: `<g>${move('0 0;0 -0.5;0 0', 1.2)}<path d="M0 -1.4 l3.4 -1 -1.2 1.8z M0 -1.4 l2.2 0.8" fill="#F4F4F4" stroke="#BBB" stroke-width="0.12"/></g>`,
-  book: (color: string) => `<g>${move('0 0;0 -0.6;0 0', 1)}<rect x="1" y="-1.6" width="0.2" height="1.4" fill="#F4F4F4"/>` +
-    flap('M1 -0.2 l-1.2 -0.4 v-1.4 l1.2 0.4z', 'M1 -0.2 l-1 -1 v-1.2 l1 -0.6z', color, 0.5) + flap('M1.2 -0.2 l1.2 -0.4 v-1.4 l-1.2 0.4z', 'M1.2 -0.2 l1 -1 v-1.2 l-1 -0.6z', color, 0.5) + `</g>`,
-  bus: `<rect x="0" y="-4" width="9" height="3" rx="0.4" fill="#F2B84B"/><rect x="0" y="-2" width="9" height="0.3" fill="#1E1E24"/>` +
-    [0.6, 2.4, 4.2, 6, 7.8].map(x => `<rect x="${x}" y="-3.6" width="1.2" height="1" fill="#7FD1FF"/>`).join('') + word(3, -1.25, 'SCHOOL', '#1E1E24', 0.7) + wheel(1.8) + wheel(7.2),
-  apple: `<g>${spin('0 0.8 -0.8;-360 0.8 -0.8', 1)}<circle cx="0.8" cy="-0.8" r="0.8" fill="#E5534B"/><rect x="0.7" y="-1.9" width="0.2" height="0.5" fill="#6B4A2E"/><path d="M0.9 -1.7 q0.5 -0.4 0.8 0" fill="#5BB37F"/></g>`,
-}
-const at = (x: number, y: number, s: number, svg: string) => `<g transform="translate(${x} ${y}) scale(${s})">${svg}</g>`
-
-// What passes behind each character, far to near: only moving things, no landscape.
-function sceneryOf(c: Character): [string, string, string] {
-  const M = MOVERS
-  switch (c) {
-    case 'digger': return [at(2, 6, 1.6, M.bat) + at(15, 3, 1.3, M.bat), at(12, 13, 1.6, M.cart), at(1, 15, 1.8, M.rock)]
-    case 'cowboy': return [at(4, 4, 1.4, M.buzzard), at(12, 12, 1.3, M.horse('#6B4A2E', false)), at(2, 15, 1.6, M.horse('#3A2A20', true)) + at(19, 15, 1.6, M.tumbleweed)]
-    case 'police': return [at(6, 6, 1.8, M.helicopter(false)), at(12, 13, 1.5, M.policeCar), at(1, 15, 1.7, M.robber)]
-    case 'nurse': return [at(8, 6, 1.8, M.helicopter(true)), at(10, 13, 1.6, M.ambulance), at(2, 15, 1.6, M.wheelchair)]
-    case 'biker': return [at(3, 4, 1.4, M.bird) + at(16, 6, 1.2, M.bird), at(10, 13, 1.4, M.truck('#4F86E0')), at(0, 15, 1.7, M.car('#E5534B'))]
-    case 'worker': return [at(10, 7, 1.6, M.truck('#F08A24')), at(2, 13, 1.5, M.mixer), at(12, 15, 1.6, M.truck('#E8C547'))]
-    case 'astronaut': return [at(2, 4, 1.8, M.ufo), at(10, 12, 1.7, M.rocket), at(2, 9, 1.6, M.comet) + at(18, 15, 1.5, M.rock)]
-    case 'detective': return [at(2, 4, 1.5, M.crow) + at(16, 6, 1.2, M.crow), at(8, 13, 1.3, M.horse('#5A5A68', false) + M.carriage), at(1, 15, 2, M.cat)]
-    case 'writer': return [at(3, 4, 1.5, M.bird) + at(16, 2, 1.2, M.bird), at(10, 8, 1.8, M.plane), at(18, 14, 2, M.book('#7E5BC8')) + at(4, 15, 1.6, M.book('#E5534B'))]
-    case 'teacher': return [at(2, 5, 1.8, M.plane) + at(16, 2, 1.4, M.plane), at(6, 13, 1.3, M.bus), at(1, 15, 1.8, M.apple)]
-  }
-}
-
-function backdropSvg(c: Character, busy: boolean) {
-  const speeds = c === 'biker' ? [6, 2.4, 0.9] : c === 'astronaut' ? [40, 20, 9] : busy ? [16, 8, 3.2] : [32, 16, 6.4]
-  const opacity = [0.25, 0.4, 0.55]
-  return `<g class="parallax">` + sceneryOf(c).map((tile, i) =>
-    `<g opacity="${opacity[i]}"><g>${move('0 0;-26 0', speeds[i]!, ' calcMode="linear"')}${tile}<g transform="translate(26 0)">${tile}</g></g></g>`).join('') + `</g>`
-}
-
 // A commit pops a green stamp with confetti; a push launches an arrow. Each plays a few times, then hides.
 function eventSvg(kind: 'commit' | 'push') {
   const once = ' repeatCount="3" fill="freeze"'
@@ -851,7 +763,7 @@ function avatarSvg(index: number, c: Character, sprites: Sprites, opts: AvatarOp
   const shadow = `<ellipse cx="8" cy="13.6" rx="3" ry="0.5" fill="#000" opacity="0.35">${shadowShrink}</ellipse>`
   const object = act ? `<g>${use?.react ?? ''}<g transform="translate(3 0)">${act.object}</g>${use?.hit ?? ''}</g>` : ''
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -4 26 19" shape-rendering="crispEdges">` +
-    `${live ? backdropSvg(c, busy) : ''}${shadow}${object}<g>${tricks}${figure}${part.gear}</g>${act?.under ?? ''}` +
+    `${shadow}${object}<g>${tricks}${figure}${part.gear}</g>${act?.under ?? ''}` +
     `${live ? gagsSvg(opts.elapsedMs ?? 0) : ''}${opts.event ? eventSvg(opts.event) : ''}</svg>`
 }
 

@@ -103,7 +103,7 @@ test('a commit by an agent pops the commit stamp on its sprite', async ($, on) =
   await ui.unmount()
 })
 
-test('a busy character keeps its own tool and uses it on the work, over scrolling scenery', { options: { character: 'police' } }, async ($, on) => {
+test('a busy character keeps its own tool and uses it on the work', { options: { character: 'police' } }, async ($, on) => {
   on('tool.call', () => ({ result: 'ok' }))
   await setup($, on)
   await $.tool.call({ tool: 'Read', file_path: '/x.md', agentId: 'a1' })
@@ -113,7 +113,7 @@ test('a busy character keeps its own tool and uses it on the work, over scrollin
   const source = String(reading?.source)
   expect(source).toContain('#2A2D34')
   expect(source).toContain('BANG!')
-  expect(source.match(/class="parallax"/g)).toHaveLength(1)
+  expect(source).not.toContain('parallax')
   expect(source).not.toMatch(/type="rotate"[^>]*additive="sum"/)
   expect(String(thinking?.source)).toContain('#2A2D34')
   await ui.unmount()
